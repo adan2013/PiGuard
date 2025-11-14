@@ -15,28 +15,25 @@ if (process.platform !== "linux") {
 }
 
 async function checkGPIO() {
+  let gpioAccessOK = false;
+
   try {
     console.log("1. Checking GPIO module access...");
     const testPin = 18;
     const gpio = new Gpio(testPin, "in", "none");
     gpio.unexport();
     console.log("   ✓ GPIO module accessible\n");
+    gpioAccessOK = true;
   } catch (error) {
     console.error(`   ❌ GPIO access failed: ${error.message}`);
     if (error.code === "EINVAL" || error.errno === "EINVAL") {
-      console.error("\n   This usually means:");
-      console.error("   - Missing GPIO permissions (user not in gpio group)");
-      console.error("   - GPIO kernel module not loaded");
-      console.error("\n   Fix:");
-      console.error("   sudo usermod -a -G gpio $USER");
-      console.error("   sudo reboot");
+      console.error("   This usually indicates permission issues.\n");
     }
-    process.exit(1);
   }
 
   console.log("2. Checking permissions...");
   const { exec } = require("child_process");
-  
+
   exec("groups", (error, stdout) => {
     if (error) {
       console.log("   ⚠ Could not check groups");
@@ -67,20 +64,60 @@ async function checkGPIO() {
           console.log("");
         }
 
-        exec("test -w /sys/class/gpio/export && echo 'writable' || echo 'NOT writable'", (error3, stdout3) => {
-          const isWritable = stdout3.trim() === "writable";
-          console.log("5. /sys/class/gpio/export permissions:");
-          if (isWritable) {
-            console.log("   ✓ export file is writable");
-          } else {
-            console.log("   ❌ export file is NOT writable (permission denied)");
-            console.log("   Fix: sudo chmod 666 /sys/class/gpio/export");
-            console.log("   Or: sudo usermod -a -G gpio $USER && sudo reboot");
-          }
-          console.log("");
+        exec(
+          "test -w /sys/class/gpio/export && echo 'writable' || echo 'NOT writable'",
+          (error3, stdout3) => {
+            const isWritable = stdout3.trim() === "writable";
+            console.log("5. /sys/class/gpio/export permissions:");
+            if (isWritable) {
+              console.log("   ✓ export file is writable");
+            } else {
+              console.log(
+                "   ❌ export file is NOT writable (permission denied)"
+              );
+              console.log(
+                "   This is likely the root cause of the EINVAL error!"
+              );
+              console.log("\n   Quick fix:");
+              console.log(
+                "   sudo chmod 666 /sys/class/gpio/export /sys/class/gpio/unexport"
+              );
+              console.log("\n   Permanent fix:");
+              console.log("   sudo usermod -a -G gpio $USER && sudo reboot");
+            }
+            console.log("");
 
-          testSpecificPin();
-        });
+            exec(
+              "ls -l /sys/class/gpio/export 2>/dev/null",
+              (error4, stdout4) => {
+                if (!error4) {
+                  console.log("6. Current export file permissions:");
+                  console.log(stdout4);
+                  console.log("");
+                }
+
+                if (!gpioAccessOK && !isWritable) {
+                  console.log("⚠️  SUMMARY:");
+                  console.log(
+                    "   GPIO access failed due to permission issues."
+                  );
+                  console.log(
+                    "   The export file is not writable by your user."
+                  );
+                  console.log("\n   SOLUTION:");
+                  console.log("   Run these commands:");
+                  console.log("   sudo usermod -a -G gpio $USER");
+                  console.log("   sudo reboot");
+                  console.log(
+                    "\n   After reboot, run this diagnostic again.\n"
+                  );
+                }
+
+                testSpecificPin();
+              }
+            );
+          }
+        );
       });
     });
   });
@@ -90,13 +127,13 @@ function testSpecificPin() {
   const pin = process.argv[2] ? parseInt(process.argv[2], 10) : null;
 
   if (!pin) {
-    console.log("6. To test a specific GPIO pin, run:");
+    console.log("7. To test a specific GPIO pin, run:");
     console.log("   node scripts/check-gpio.js <pin_number>");
     console.log("   Example: node scripts/check-gpio.js 21");
     return;
   }
 
-  console.log(`6. Testing GPIO pin ${pin}...`);
+  console.log(`7. Testing GPIO pin ${pin}...`);
   let gpio = null;
 
   try {
@@ -113,17 +150,31 @@ function testSpecificPin() {
     console.log(`   ✓ Pin ${pin} unexported successfully\n`);
   } catch (error) {
     console.error(`   ❌ Failed to configure GPIO ${pin}: ${error.message}`);
-    
+
     if (error.code === "EINVAL" || error.errno === "EINVAL") {
       console.error(`\n   EINVAL error on GPIO ${pin}:`);
-      console.error(`   - Check if pin ${pin} exists on your Raspberry Pi model`);
-      console.error(`   - Verify pin is not already in use: ls /sys/class/gpio/`);
-      console.error(`   - Check export file permissions: ls -l /sys/class/gpio/export`);
-      console.error(`   - Ensure GPIO kernel module is loaded: lsmod | grep gpio`);
-      console.error(`   - Try manually: echo ${pin} | sudo tee /sys/class/gpio/export`);
+      console.error(
+        `   - Check if pin ${pin} exists on your Raspberry Pi model`
+      );
+      console.error(
+        `   - Verify pin is not already in use: ls /sys/class/gpio/`
+      );
+      console.error(
+        `   - Check export file permissions: ls -l /sys/class/gpio/export`
+      );
+      console.error(
+        `   - Ensure GPIO kernel module is loaded: lsmod | grep gpio`
+      );
+      console.error(
+        `   - Try manually: echo ${pin} | sudo tee /sys/class/gpio/export`
+      );
       console.error(`\n   Common fix:`);
-      console.error(`   sudo chmod 666 /sys/class/gpio/export /sys/class/gpio/unexport`);
-      console.error(`   Or add user to gpio group: sudo usermod -a -G gpio $USER && sudo reboot`);
+      console.error(
+        `   sudo chmod 666 /sys/class/gpio/export /sys/class/gpio/unexport`
+      );
+      console.error(
+        `   Or add user to gpio group: sudo usermod -a -G gpio $USER && sudo reboot`
+      );
     } else if (error.code === "EPERM" || error.errno === "EPERM") {
       console.error(`\n   Permission denied on GPIO ${pin}:`);
       console.error(`   Run: sudo usermod -a -G gpio $USER && sudo reboot`);
@@ -135,12 +186,10 @@ function testSpecificPin() {
     if (gpio) {
       try {
         gpio.unexport();
-      } catch (e) {
-      }
+      } catch (e) {}
     }
     process.exit(1);
   }
 }
 
 checkGPIO();
-
