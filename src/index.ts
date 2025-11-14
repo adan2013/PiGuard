@@ -3,6 +3,7 @@ import { Config } from "./Config";
 import { GSMModule } from "./GSMModule";
 import { TriggerInfo, SystemStatus, SMSResult, GpioPins } from "./types";
 
+const GPIO_OFFSET = 512;
 dotenv.config();
 
 class PiGuard {
@@ -65,13 +66,14 @@ class PiGuard {
 
         try {
           try {
-            const existingGpio = new Gpio(pin, "in", "none");
+            const existingGpio = new Gpio(pin + GPIO_OFFSET, "in", "none");
             existingGpio.unexport();
             await new Promise((resolve) => setTimeout(resolve, 100));
           } catch (e) {}
 
-          gpio = new Gpio(pin, "in", "rising", {
+          gpio = new Gpio(pin + GPIO_OFFSET, "in", "both", {
             debounceTimeout: 10,
+            reconfigureDirection: true,
           });
 
           gpio.watch((err: Error | null | undefined, value: number) => {
