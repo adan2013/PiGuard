@@ -57,11 +57,6 @@ class PiGuard {
     try {
       const { Gpio } = await import("onoff");
 
-      console.log("[PiGuard] Checking GPIO permissions...");
-      const testGpio = new Gpio(18, "in", "none");
-      testGpio.unexport();
-      console.log("[PiGuard] GPIO permissions OK");
-
       let successCount = 0;
 
       for (const [key, pin] of Object.entries(gpioConfig)) {
@@ -70,9 +65,7 @@ class PiGuard {
 
         try {
           if (pin < 0 || pin > 27) {
-            throw new Error(
-              `Invalid GPIO pin number: ${pin} (must be 0-27 for RPi)`
-            );
+            throw new Error(`Invalid GPIO pin number: ${pin}`);
           }
 
           try {
@@ -113,49 +106,10 @@ class PiGuard {
 
           successCount++;
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          const errorCode = (error as any)?.code || "";
-          const errno = (error as any)?.errno || "";
-
           console.error(
             `[PiGuard] Failed to setup trigger ${key} (${triggerName}) on GPIO ${pin}:`,
-            errorMessage
+            error
           );
-
-          if (
-            errorCode === "EINVAL" ||
-            errno === "EINVAL" ||
-            errorMessage.includes("EINVAL")
-          ) {
-            console.error(
-              `[PiGuard] EINVAL error on GPIO ${pin} - Possible causes:`
-            );
-            console.error(
-              `[PiGuard]   1. Permission denied - Check: ls -l /dev/gpiochip*`
-            );
-            console.error(
-              `[PiGuard]   2. Pin already in use - Check: ls /sys/class/gpio/`
-            );
-            console.error(`[PiGuard]   3. Pin does not support input mode`);
-            console.error(`[PiGuard]   4. GPIO kernel module not loaded`);
-            console.error(
-              `[PiGuard] Fix: sudo usermod -a -G gpio $USER && sudo reboot`
-            );
-            console.error(
-              `[PiGuard] Or run with: sudo npm start (not recommended for production)`
-            );
-          } else if (errorMessage.includes("EPERM") || errorCode === "EPERM") {
-            console.error(`[PiGuard] Permission denied on GPIO ${pin}`);
-            console.error(
-              `[PiGuard] Run: sudo usermod -a -G gpio $USER && sudo reboot`
-            );
-          } else if (errorMessage.includes("EBUSY") || errorCode === "EBUSY") {
-            console.error(`[PiGuard] GPIO ${pin} is busy (already in use)`);
-            console.error(
-              `[PiGuard] Try unexporting: echo ${pin} | sudo tee /sys/class/gpio/unexport`
-            );
-          }
 
           if (gpio) {
             try {
@@ -170,15 +124,10 @@ class PiGuard {
           `[PiGuard] ${successCount} trigger(s) configured successfully\n`
         );
       } else {
-        console.warn(
-          "[PiGuard] No GPIO triggers configured. Check diagnostics above.\n"
-        );
+        console.warn("[PiGuard] No GPIO triggers configured\n");
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(`[PiGuard] Failed to load GPIO module: ${errorMessage}`);
-      console.error("[PiGuard] GPIO features disabled.");
+      console.error(`[PiGuard] Failed to load GPIO module:`, error);
     }
   }
 
@@ -200,11 +149,9 @@ class PiGuard {
       const results: SMSResult[] = await this.gsm.sendAlert(triggerName);
 
       results.forEach((result) => {
-        if (result.success) {
-          console.log(`[PiGuard] ✓ Alert sent to ${result.phoneNumber}`);
-        } else {
+        if (!result.success) {
           console.error(
-            `[PiGuard] ✗ Failed to send alert to ${result.phoneNumber}: ${result.error}`
+            `[PiGuard] Failed to send alert to ${result.phoneNumber}: ${result.error}`
           );
         }
       });
