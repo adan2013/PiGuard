@@ -22,6 +22,7 @@ TypeScript-based surveillance system for Raspberry Pi with GSM module support.
 
 ```bash
 npm install
+npm run list-ports  # Find your serial port
 cp env.example .env
 nano .env
 ```
@@ -69,10 +70,11 @@ AT_COMMAND_RETRY=3
 ## Usage
 
 ```bash
-npm run build    # Compile TypeScript
-npm start        # Build and run
-npm run dev      # Development mode
-npm run watch    # Watch mode
+npm run build       # Compile TypeScript
+npm start           # Build and run
+npm run dev         # Development mode
+npm run watch       # Watch mode
+npm run list-ports  # List available serial ports
 ```
 
 ## Run as Service
@@ -126,6 +128,8 @@ PiGuard/
 │   ├── ATCommandQueue.ts  # AT command queue
 │   ├── GSMModule.ts       # GSM communication
 │   └── index.ts           # Main application
+├── scripts/
+│   └── list-ports.js      # Serial port scanner
 ├── dist/                  # Compiled output
 ├── package.json
 ├── tsconfig.json
@@ -152,7 +156,8 @@ sudo reboot
 ### GSM Module Not Responding
 
 - Check physical connections
-- Verify serial port: `ls /dev/tty*`
+- Run `npm run list-ports` to find available serial ports
+- Verify serial port in `.env` file
 - Test with: `minicom -D /dev/ttyUSB0 -b 9600`
 - Ensure SIM card is inserted
 - Check power supply
