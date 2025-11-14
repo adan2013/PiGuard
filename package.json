@@ -21,7 +21,7 @@
   "dependencies": {
     "@serialport/parser-readline": "^12.0.0",
     "dotenv": "^16.3.1",
-    "node-libgpiod": "github:sombriks/node-libgpiod#main-2x",
+    "node-libgpiod": "^0.5.3",
     "serialport": "^12.0.0"
   },
   "devDependencies": {
