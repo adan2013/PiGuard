@@ -1,0 +1,146 @@
+#!/usr/bin/env node
+
+const { Gpio } = require("onoff");
+
+console.log("=== GPIO Diagnostic Tool ===\n");
+
+console.log(`Node.js version: ${process.version}`);
+console.log(`Platform: ${process.platform}`);
+console.log(`Architecture: ${process.arch}`);
+console.log(`User: ${process.env.USER || process.env.USERNAME || "unknown"}\n`);
+
+if (process.platform !== "linux") {
+  console.error("❌ GPIO is only available on Linux (Raspberry Pi)");
+  process.exit(1);
+}
+
+async function checkGPIO() {
+  try {
+    console.log("1. Checking GPIO module access...");
+    const testPin = 18;
+    const gpio = new Gpio(testPin, "in", "none");
+    gpio.unexport();
+    console.log("   ✓ GPIO module accessible\n");
+  } catch (error) {
+    console.error(`   ❌ GPIO access failed: ${error.message}`);
+    if (error.code === "EINVAL" || error.errno === "EINVAL") {
+      console.error("\n   This usually means:");
+      console.error("   - Missing GPIO permissions (user not in gpio group)");
+      console.error("   - GPIO kernel module not loaded");
+      console.error("\n   Fix:");
+      console.error("   sudo usermod -a -G gpio $USER");
+      console.error("   sudo reboot");
+    }
+    process.exit(1);
+  }
+
+  console.log("2. Checking permissions...");
+  const { exec } = require("child_process");
+  
+  exec("groups", (error, stdout) => {
+    if (error) {
+      console.log("   ⚠ Could not check groups");
+    } else {
+      const groups = stdout.trim().split(" ");
+      if (groups.includes("gpio")) {
+        console.log("   ✓ User is in gpio group");
+      } else {
+        console.log("   ❌ User is NOT in gpio group");
+        console.log("   Fix: sudo usermod -a -G gpio $USER && sudo reboot");
+      }
+    }
+    console.log("");
+
+    exec("ls -l /dev/gpiochip* 2>/dev/null", (error, stdout) => {
+      if (error) {
+        console.log("3. ⚠ Could not check /dev/gpiochip* devices");
+        console.log("   This might indicate GPIO support is not available\n");
+      } else {
+        console.log("3. GPIO devices found:");
+        console.log(stdout);
+      }
+
+      exec("ls -la /sys/class/gpio/ 2>/dev/null", (error2, stdout2) => {
+        if (!error2) {
+          console.log("4. Legacy sysfs GPIO interface:");
+          console.log(stdout2);
+          console.log("");
+        }
+
+        exec("test -w /sys/class/gpio/export && echo 'writable' || echo 'NOT writable'", (error3, stdout3) => {
+          const isWritable = stdout3.trim() === "writable";
+          console.log("5. /sys/class/gpio/export permissions:");
+          if (isWritable) {
+            console.log("   ✓ export file is writable");
+          } else {
+            console.log("   ❌ export file is NOT writable (permission denied)");
+            console.log("   Fix: sudo chmod 666 /sys/class/gpio/export");
+            console.log("   Or: sudo usermod -a -G gpio $USER && sudo reboot");
+          }
+          console.log("");
+
+          testSpecificPin();
+        });
+      });
+    });
+  });
+}
+
+function testSpecificPin() {
+  const pin = process.argv[2] ? parseInt(process.argv[2], 10) : null;
+
+  if (!pin) {
+    console.log("6. To test a specific GPIO pin, run:");
+    console.log("   node scripts/check-gpio.js <pin_number>");
+    console.log("   Example: node scripts/check-gpio.js 21");
+    return;
+  }
+
+  console.log(`6. Testing GPIO pin ${pin}...`);
+  let gpio = null;
+
+  try {
+    gpio = new Gpio(pin, "in", "both", {
+      debounceTimeout: 10,
+    });
+
+    const value = gpio.readSync();
+    console.log(`   ✓ GPIO ${pin} configured successfully`);
+    console.log(`   ✓ Current value: ${value}`);
+    console.log(`   ✓ Pin is ready for monitoring`);
+
+    gpio.unexport();
+    console.log(`   ✓ Pin ${pin} unexported successfully\n`);
+  } catch (error) {
+    console.error(`   ❌ Failed to configure GPIO ${pin}: ${error.message}`);
+    
+    if (error.code === "EINVAL" || error.errno === "EINVAL") {
+      console.error(`\n   EINVAL error on GPIO ${pin}:`);
+      console.error(`   - Check if pin ${pin} exists on your Raspberry Pi model`);
+      console.error(`   - Verify pin is not already in use: ls /sys/class/gpio/`);
+      console.error(`   - Check export file permissions: ls -l /sys/class/gpio/export`);
+      console.error(`   - Ensure GPIO kernel module is loaded: lsmod | grep gpio`);
+      console.error(`   - Try manually: echo ${pin} | sudo tee /sys/class/gpio/export`);
+      console.error(`\n   Common fix:`);
+      console.error(`   sudo chmod 666 /sys/class/gpio/export /sys/class/gpio/unexport`);
+      console.error(`   Or add user to gpio group: sudo usermod -a -G gpio $USER && sudo reboot`);
+    } else if (error.code === "EPERM" || error.errno === "EPERM") {
+      console.error(`\n   Permission denied on GPIO ${pin}:`);
+      console.error(`   Run: sudo usermod -a -G gpio $USER && sudo reboot`);
+    } else if (error.code === "EBUSY" || error.errno === "EBUSY") {
+      console.error(`\n   GPIO ${pin} is busy (already in use):`);
+      console.error(`   Try: echo ${pin} | sudo tee /sys/class/gpio/unexport`);
+    }
+
+    if (gpio) {
+      try {
+        gpio.unexport();
+      } catch (e) {
+      }
+    }
+    process.exit(1);
+  }
+}
+
+checkGPIO();
+

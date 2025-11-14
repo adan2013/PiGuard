@@ -57,17 +57,39 @@ class PiGuard {
     try {
       const { Gpio } = await import("onoff");
 
+      console.log("[PiGuard] Checking GPIO permissions...");
+      const testGpio = new Gpio(18, "in", "none");
+      testGpio.unexport();
+      console.log("[PiGuard] GPIO permissions OK");
+
       let successCount = 0;
 
-      Object.entries(gpioConfig).forEach(([key, pin]) => {
-        try {
-          const gpio = new Gpio(pin, "in", "rising", { debounceTimeout: 100 });
-          const triggerName = this.config.getTriggerName(key as keyof GpioPins);
+      for (const [key, pin] of Object.entries(gpioConfig)) {
+        const triggerName = this.config.getTriggerName(key as keyof GpioPins);
+        let gpio: any = null;
 
-          gpio.watch((err, value) => {
+        try {
+          if (pin < 0 || pin > 27) {
+            throw new Error(
+              `Invalid GPIO pin number: ${pin} (must be 0-27 for RPi)`
+            );
+          }
+
+          try {
+            const existingGpio = new Gpio(pin, "in", "none");
+            existingGpio.unexport();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          } catch (e) {}
+
+          gpio = new Gpio(pin, "in", "both", {
+            debounceTimeout: 10,
+            activeLow: false,
+          });
+
+          gpio.watch((err: Error | null | undefined, value: number) => {
             if (err) {
               console.error(
-                `[PiGuard] Error on ${triggerName} (GPIO ${pin}):`,
+                `[PiGuard] Error watching ${triggerName} (GPIO ${pin}):`,
                 err
               );
               return;
@@ -78,34 +100,70 @@ class PiGuard {
             }
           });
 
+          const initialValue = gpio.readSync();
+          console.log(
+            `[PiGuard] ✓ ${triggerName} monitoring on GPIO ${pin} (initial state: ${initialValue})`
+          );
+
           this.triggers[key] = {
             gpio,
             pin,
             name: triggerName,
           };
 
-          console.log(`[PiGuard] ✓ ${triggerName} monitoring on GPIO ${pin}`);
           successCount++;
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
+          const errorCode = (error as any)?.code || "";
+          const errno = (error as any)?.errno || "";
+
           console.error(
-            `[PiGuard] Failed to setup trigger ${key} on GPIO ${pin}:`,
+            `[PiGuard] Failed to setup trigger ${key} (${triggerName}) on GPIO ${pin}:`,
             errorMessage
           );
+
           if (
-            errorMessage.includes("EINVAL") ||
-            errorMessage.includes("write")
+            errorCode === "EINVAL" ||
+            errno === "EINVAL" ||
+            errorMessage.includes("EINVAL")
           ) {
             console.error(
-              `[PiGuard] This may indicate missing GPIO permissions or running on unsupported hardware.`
+              `[PiGuard] EINVAL error on GPIO ${pin} - Possible causes:`
             );
+            console.error(
+              `[PiGuard]   1. Permission denied - Check: ls -l /dev/gpiochip*`
+            );
+            console.error(
+              `[PiGuard]   2. Pin already in use - Check: ls /sys/class/gpio/`
+            );
+            console.error(`[PiGuard]   3. Pin does not support input mode`);
+            console.error(`[PiGuard]   4. GPIO kernel module not loaded`);
+            console.error(
+              `[PiGuard] Fix: sudo usermod -a -G gpio $USER && sudo reboot`
+            );
+            console.error(
+              `[PiGuard] Or run with: sudo npm start (not recommended for production)`
+            );
+          } else if (errorMessage.includes("EPERM") || errorCode === "EPERM") {
+            console.error(`[PiGuard] Permission denied on GPIO ${pin}`);
             console.error(
               `[PiGuard] Run: sudo usermod -a -G gpio $USER && sudo reboot`
             );
+          } else if (errorMessage.includes("EBUSY") || errorCode === "EBUSY") {
+            console.error(`[PiGuard] GPIO ${pin} is busy (already in use)`);
+            console.error(
+              `[PiGuard] Try unexporting: echo ${pin} | sudo tee /sys/class/gpio/unexport`
+            );
+          }
+
+          if (gpio) {
+            try {
+              gpio.unexport();
+            } catch (e) {}
           }
         }
-      });
+      }
 
       if (successCount > 0) {
         console.log(
@@ -113,7 +171,7 @@ class PiGuard {
         );
       } else {
         console.warn(
-          "[PiGuard] No GPIO triggers configured. Check permissions.\n"
+          "[PiGuard] No GPIO triggers configured. Check diagnostics above.\n"
         );
       }
     } catch (error) {

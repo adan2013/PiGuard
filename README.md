@@ -165,9 +165,40 @@ sudo reboot
 ### GPIO Access
 
 ```bash
+npm run check-gpio        # Diagnostic tool
+npm run check-gpio 21     # Test specific GPIO pin
+
 sudo usermod -a -G gpio $USER
 sudo reboot
 ```
+
+### GPIO EINVAL Error on Raspberry Pi
+
+If you see `EINVAL: invalid argument, write` when setting up GPIO pins:
+
+1. **Run diagnostic**: `npm run check-gpio 21`
+2. **Check export permissions**: `ls -l /sys/class/gpio/export`
+3. **Verify user in gpio group**: `groups | grep gpio`
+4. **Check if pin exists**: GPIO 21 exists on RPi 3 B+, verify it's not in use
+5. **Check kernel module**: `lsmod | grep gpio`
+
+Common fixes:
+
+```bash
+# Fix 1: Make export/unexport writable (temporary)
+sudo chmod 666 /sys/class/gpio/export /sys/class/gpio/unexport
+
+# Fix 2: Add user to gpio group (permanent)
+sudo usermod -a -G gpio $USER
+sudo reboot
+
+# Fix 3: Test pin manually
+echo 21 | sudo tee /sys/class/gpio/export
+ls /sys/class/gpio/ | grep gpio21  # Should show gpio21 directory
+echo 21 | sudo tee /sys/class/gpio/unexport
+```
+
+**Note**: If you see `gpiochip512` and `gpiochip566` in `/sys/class/gpio/`, you're using the newer GPIO interface. The `onoff` library still uses the legacy sysfs interface (`export`/`unexport`), which should work alongside it. The EINVAL error usually indicates permission issues with the export file.
 
 ### No SMS Received
 
