@@ -134,19 +134,19 @@ function testSpecificPin() {
   }
 
   console.log(`7. Testing GPIO pin ${pin}...`);
-  
+
   const { exec } = require("child_process");
   const { promisify } = require("util");
   const execAsync = promisify(exec);
-  
+
   exec(`ls /sys/class/gpio/ | grep "^gpio${pin}$"`, async (error, stdout) => {
     const alreadyExported = !error && stdout.trim() === `gpio${pin}`;
-    
+
     if (alreadyExported) {
       console.log(`   ⚠ GPIO ${pin} is already exported`);
       try {
         await execAsync(`echo ${pin} | sudo tee /sys/class/gpio/unexport`);
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 200));
         console.log(`   ✓ Unexported GPIO ${pin}, will retry\n`);
       } catch (e) {
         console.log(`   ⚠ Could not unexport: ${e.message}\n`);
@@ -155,33 +155,45 @@ function testSpecificPin() {
 
     console.log(`8. Attempting manual export of GPIO ${pin}...`);
     try {
-      const { stdout, stderr } = await execAsync(`echo ${pin} | tee /sys/class/gpio/export`);
-      await new Promise(resolve => setTimeout(resolve, 200));
+      const { stdout, stderr } = await execAsync(
+        `echo ${pin} | tee /sys/class/gpio/export`
+      );
+      await new Promise((resolve) => setTimeout(resolve, 200));
       console.log(`   ✓ Manual export successful`);
-      
-      exec(`cat /sys/class/gpio/gpio${pin}/direction 2>/dev/null`, (error, stdout) => {
-        if (!error) {
-          console.log(`   ✓ Pin direction: ${stdout.trim()}`);
+
+      exec(
+        `cat /sys/class/gpio/gpio${pin}/direction 2>/dev/null`,
+        (error, stdout) => {
+          if (!error) {
+            console.log(`   ✓ Pin direction: ${stdout.trim()}`);
+          }
         }
-      });
-      
-      exec(`cat /sys/class/gpio/gpio${pin}/value 2>/dev/null`, (error, stdout) => {
-        if (!error) {
-          console.log(`   ✓ Pin value: ${stdout.trim()}`);
+      );
+
+      exec(
+        `cat /sys/class/gpio/gpio${pin}/value 2>/dev/null`,
+        (error, stdout) => {
+          if (!error) {
+            console.log(`   ✓ Pin value: ${stdout.trim()}`);
+          }
+          console.log("");
+          testWithLibrary();
         }
-        console.log("");
-        testWithLibrary();
-      });
+      );
     } catch (error) {
       console.error(`   ❌ Manual export failed: ${error.message}`);
       if (error.stderr) console.error(`   Error: ${error.stderr}`);
       console.log("");
-      console.log(`   This suggests GPIO ${pin} may not be available on this system.`);
+      console.log(
+        `   This suggests GPIO ${pin} may not be available on this system.`
+      );
       console.log(`   Possible reasons:`);
       console.log(`   - Pin ${pin} is reserved by the system`);
       console.log(`   - Pin ${pin} doesn't exist on this Raspberry Pi model`);
       console.log(`   - Pin ${pin} is already in use by another driver`);
-      console.log(`\n   Try a different GPIO pin in your .env file (e.g., GPIO 2, 3, 4, 5, 6, 12, 13, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 27)\n`);
+      console.log(
+        `\n   Try a different GPIO pin in your .env file (e.g., GPIO 2, 3, 4, 5, 6, 12, 13, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 27)\n`
+      );
       testWithLibrary();
     }
   });
@@ -196,7 +208,9 @@ function testSpecificPin() {
       });
 
       const value = gpio.readSync();
-      console.log(`   ✓ GPIO ${pin} configured successfully with onoff library`);
+      console.log(
+        `   ✓ GPIO ${pin} configured successfully with onoff library`
+      );
       console.log(`   ✓ Current value: ${value}`);
       console.log(`   ✓ Pin is ready for monitoring`);
 
@@ -204,46 +218,49 @@ function testSpecificPin() {
       console.log(`   ✓ Pin ${pin} unexported successfully\n`);
       console.log(`✅ GPIO ${pin} is working correctly!\n`);
     } catch (error) {
-    console.error(`   ❌ Failed to configure GPIO ${pin}: ${error.message}`);
+      console.error(`   ❌ Failed to configure GPIO ${pin}: ${error.message}`);
 
-    if (error.code === "EINVAL" || error.errno === "EINVAL") {
-      console.error(`\n   EINVAL error on GPIO ${pin}:`);
-      console.error(
-        `   - Check if pin ${pin} exists on your Raspberry Pi model`
-      );
-      console.error(
-        `   - Verify pin is not already in use: ls /sys/class/gpio/`
-      );
-      console.error(
-        `   - Check export file permissions: ls -l /sys/class/gpio/export`
-      );
-      console.error(
-        `   - Ensure GPIO kernel module is loaded: lsmod | grep gpio`
-      );
-      console.error(
-        `   - Try manually: echo ${pin} | sudo tee /sys/class/gpio/export`
-      );
-      console.error(`\n   Common fix:`);
-      console.error(
-        `   sudo chmod 666 /sys/class/gpio/export /sys/class/gpio/unexport`
-      );
-      console.error(
-        `   Or add user to gpio group: sudo usermod -a -G gpio $USER && sudo reboot`
-      );
-    } else if (error.code === "EPERM" || error.errno === "EPERM") {
-      console.error(`\n   Permission denied on GPIO ${pin}:`);
-      console.error(`   Run: sudo usermod -a -G gpio $USER && sudo reboot`);
-    } else if (error.code === "EBUSY" || error.errno === "EBUSY") {
-      console.error(`\n   GPIO ${pin} is busy (already in use):`);
-      console.error(`   Try: echo ${pin} | sudo tee /sys/class/gpio/unexport`);
-    }
+      if (error.code === "EINVAL" || error.errno === "EINVAL") {
+        console.error(`\n   EINVAL error on GPIO ${pin}:`);
+        console.error(
+          `   - Check if pin ${pin} exists on your Raspberry Pi model`
+        );
+        console.error(
+          `   - Verify pin is not already in use: ls /sys/class/gpio/`
+        );
+        console.error(
+          `   - Check export file permissions: ls -l /sys/class/gpio/export`
+        );
+        console.error(
+          `   - Ensure GPIO kernel module is loaded: lsmod | grep gpio`
+        );
+        console.error(
+          `   - Try manually: echo ${pin} | sudo tee /sys/class/gpio/export`
+        );
+        console.error(`\n   Common fix:`);
+        console.error(
+          `   sudo chmod 666 /sys/class/gpio/export /sys/class/gpio/unexport`
+        );
+        console.error(
+          `   Or add user to gpio group: sudo usermod -a -G gpio $USER && sudo reboot`
+        );
+      } else if (error.code === "EPERM" || error.errno === "EPERM") {
+        console.error(`\n   Permission denied on GPIO ${pin}:`);
+        console.error(`   Run: sudo usermod -a -G gpio $USER && sudo reboot`);
+      } else if (error.code === "EBUSY" || error.errno === "EBUSY") {
+        console.error(`\n   GPIO ${pin} is busy (already in use):`);
+        console.error(
+          `   Try: echo ${pin} | sudo tee /sys/class/gpio/unexport`
+        );
+      }
 
-    if (gpio) {
-      try {
-        gpio.unexport();
-      } catch (e) {}
+      if (gpio) {
+        try {
+          gpio.unexport();
+        } catch (e) {}
+      }
+      process.exit(1);
     }
-    process.exit(1);
   }
 }
 
