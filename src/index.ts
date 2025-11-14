@@ -64,10 +64,6 @@ class PiGuard {
         let gpio: any = null;
 
         try {
-          if (pin < 0 || pin > 27) {
-            throw new Error(`Invalid GPIO pin number: ${pin}`);
-          }
-
           try {
             const existingGpio = new Gpio(pin, "in", "none");
             existingGpio.unexport();
