@@ -1,9 +1,9 @@
 import * as dotenv from "dotenv";
+import { Chip, Line } from "node-libgpiod";
 import { Config } from "./Config";
 import { GSMModule } from "./GSMModule";
 import { TriggerInfo, SystemStatus, SMSResult, GpioPins } from "./types";
 
-const GPIO_OFFSET = 512;
 dotenv.config();
 
 class PiGuard {
@@ -13,6 +13,9 @@ class PiGuard {
   private isRunning: boolean = false;
   private lastAlertTime: number = 0;
   private cooldownPeriod: number = 5 * 60 * 1000;
+  private pollInterval: NodeJS.Timeout | null = null;
+  private readonly POLL_INTERVAL_MS = 10;
+  private gpioChip: Chip | null = null;
 
   constructor() {
     this.config = new Config();
@@ -56,49 +59,28 @@ class PiGuard {
     const gpioConfig = this.config.getGPIOConfig();
 
     try {
-      const { Gpio } = await import("onoff");
+      this.gpioChip = new Chip(0);
 
       let successCount = 0;
 
       for (const [key, pin] of Object.entries(gpioConfig)) {
         const triggerName = this.config.getTriggerName(key as keyof GpioPins);
-        let gpio: any = null;
+        let line: Line | null = null;
 
         try {
-          try {
-            const existingGpio = new Gpio(pin + GPIO_OFFSET, "in", "none");
-            existingGpio.unexport();
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          } catch (e) {}
+          line = new Line(this.gpioChip, pin);
+          line.requestInputMode();
 
-          gpio = new Gpio(pin + GPIO_OFFSET, "in", "both", {
-            debounceTimeout: 10,
-            reconfigureDirection: true,
-          });
-
-          gpio.watch((err: Error | null | undefined, value: number) => {
-            if (err) {
-              console.error(
-                `[PiGuard] Error watching ${triggerName} (GPIO ${pin}):`,
-                err
-              );
-              return;
-            }
-
-            if (value === 1) {
-              this.handleTrigger(key, triggerName);
-            }
-          });
-
-          const initialValue = gpio.readSync();
+          const initialValue = line.getValue();
           console.log(
             `[PiGuard] ✓ ${triggerName} monitoring on GPIO ${pin} (initial state: ${initialValue})`
           );
 
           this.triggers[key] = {
-            gpio,
+            gpio: line,
             pin,
             name: triggerName,
+            lastValue: initialValue,
           };
 
           successCount++;
@@ -108,9 +90,9 @@ class PiGuard {
             error
           );
 
-          if (gpio) {
+          if (line) {
             try {
-              gpio.unexport();
+              line.release();
             } catch (e) {}
           }
         }
@@ -120,12 +102,45 @@ class PiGuard {
         console.log(
           `[PiGuard] ${successCount} trigger(s) configured successfully\n`
         );
+        this.startPolling();
       } else {
         console.warn("[PiGuard] No GPIO triggers configured\n");
+        this.gpioChip = null;
       }
     } catch (error) {
       console.error(`[PiGuard] Failed to load GPIO module:`, error);
     }
+  }
+
+  private startPolling(): void {
+    if (this.pollInterval) {
+      return;
+    }
+
+    this.pollInterval = setInterval(() => {
+      if (!this.isRunning) {
+        return;
+      }
+
+      Object.entries(this.triggers).forEach(([key, trigger]) => {
+        try {
+          const currentValue = trigger.gpio.getValue();
+
+          if (trigger.lastValue === 0 && currentValue === 1) {
+            this.handleTrigger(key, trigger.name);
+          }
+
+          trigger.lastValue = currentValue;
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.error(
+            `[PiGuard] Error polling ${trigger.name} (GPIO ${trigger.pin}):`,
+            errorMessage
+          );
+        }
+      });
+    }, this.POLL_INTERVAL_MS);
   }
 
   private async handleTrigger(
@@ -203,19 +218,26 @@ class PiGuard {
 
     this.isRunning = false;
 
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+
     Object.entries(this.triggers).forEach(([_key, trigger]) => {
       try {
-        trigger.gpio.unexport();
-        console.log(`[PiGuard] Unexported GPIO ${trigger.pin}`);
+        trigger.gpio.release();
+        console.log(`[PiGuard] Released GPIO ${trigger.pin}`);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         console.error(
-          `[PiGuard] Error unexporting GPIO ${trigger.pin}:`,
+          `[PiGuard] Error releasing GPIO ${trigger.pin}:`,
           errorMessage
         );
       }
     });
+
+    this.gpioChip = null;
 
     await this.gsm.close();
 
@@ -255,14 +277,17 @@ process.on("uncaughtException", (error: Error) => {
   piGuard.shutdown();
 });
 
-process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
-  console.error(
-    "[PiGuard] Unhandled rejection at:",
-    promise,
-    "reason:",
-    reason
-  );
-});
+process.on(
+  "unhandledRejection",
+  (reason: unknown, promise: Promise<unknown>) => {
+    console.error(
+      "[PiGuard] Unhandled rejection at:",
+      promise,
+      "reason:",
+      reason
+    );
+  }
+);
 
 piGuard.initialize().catch((error: Error) => {
   console.error("[PiGuard] Failed to start:", error.message);

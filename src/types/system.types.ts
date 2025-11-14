@@ -1,10 +1,11 @@
-import { Gpio } from "onoff";
+import { Line } from "node-libgpiod";
 import { GSMStatus } from "./gsm.types";
 
 export interface TriggerInfo {
-  gpio: Gpio;
+  gpio: Line;
   pin: number;
   name: string;
+  lastValue: number;
 }
 
 export interface TriggerStatus {
@@ -19,4 +20,3 @@ export interface SystemStatus {
   triggers: TriggerStatus[];
   gsm: GSMStatus;
 }
-
