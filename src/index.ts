@@ -70,9 +70,8 @@ class PiGuard {
             await new Promise((resolve) => setTimeout(resolve, 100));
           } catch (e) {}
 
-          gpio = new Gpio(pin, "in", "both", {
+          gpio = new Gpio(pin, "in", "rising", {
             debounceTimeout: 10,
-            activeLow: false,
           });
 
           gpio.watch((err: Error | null | undefined, value: number) => {
