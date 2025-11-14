@@ -59,6 +59,13 @@ export class GSMModule {
       await this.sendCommand("AT+CMGF=1", "OK");
       await this.sendCommand("AT+CNMI=1,2,0,0,0", "OK");
 
+      const networkStatus = await this.checkNetworkRegistration();
+      if (!networkStatus) {
+        console.warn(
+          "[GSM] Warning: Network registration not confirmed. SMS may fail."
+        );
+      }
+
       this.isReady = true;
       console.log("[GSM] GSM module initialized successfully");
 
@@ -87,7 +94,8 @@ export class GSMModule {
       if (trimmedData.includes("ERROR") || trimmedData.includes("FAIL")) {
         clearTimeout(timeoutHandle);
         this.pendingCommand = null;
-        reject(new Error(`AT command error: ${trimmedData}`));
+        const errorMessage = this.getErrorMessage(trimmedData);
+        reject(new Error(errorMessage));
         return;
       }
 
@@ -238,6 +246,58 @@ export class GSMModule {
 
     this.isReady = false;
     console.log("[GSM] GSM module closed");
+  }
+
+  private getErrorMessage(errorResponse: string): string {
+    if (errorResponse.includes("+CMS ERROR: 302")) {
+      return "CMS ERROR 302: Operation not allowed - Check SIM card, network registration, or PIN lock";
+    } else if (errorResponse.includes("+CMS ERROR: 500")) {
+      return "CMS ERROR 500: Unknown error";
+    } else if (errorResponse.includes("+CMS ERROR: 513")) {
+      return "CMS ERROR 513: Memory full - Delete old SMS messages";
+    } else if (errorResponse.includes("+CMS ERROR: 517")) {
+      return "CMS ERROR 517: Invalid recipient number";
+    } else if (errorResponse.includes("+CMS ERROR: 528")) {
+      return "CMS ERROR 528: Dial string too long";
+    } else if (errorResponse.includes("+CMS ERROR:")) {
+      const match = errorResponse.match(/\+CMS ERROR:\s*(\d+)/);
+      if (match) {
+        return `CMS ERROR ${match[1]}: SMS operation failed - Check SIM card and network registration`;
+      }
+    } else if (errorResponse.includes("ERROR")) {
+      return `AT command error: ${errorResponse}`;
+    }
+    return errorResponse;
+  }
+
+  private async checkNetworkRegistration(): Promise<boolean> {
+    try {
+      const response = await this.sendCommand("AT+CREG?", "OK");
+      if (response.includes("+CREG:")) {
+        const match = response.match(/\+CREG:\s*\d+,(\d+)/);
+        if (match) {
+          const status = parseInt(match[1], 10);
+          if (status === 1 || status === 5) {
+            console.log("[GSM] Network registered successfully");
+            return true;
+          } else if (status === 0) {
+            console.warn(
+              "[GSM] Network registration: Not registered, searching..."
+            );
+          } else if (status === 2) {
+            console.warn("[GSM] Network registration: Registration denied");
+          } else if (status === 3) {
+            console.warn("[GSM] Network registration: Unknown");
+          } else if (status === 4) {
+            console.warn("[GSM] Network registration: Unknown");
+          }
+        }
+      }
+      return false;
+    } catch (error) {
+      console.warn("[GSM] Could not check network registration status");
+      return false;
+    }
   }
 
   private delay(ms: number): Promise<void> {

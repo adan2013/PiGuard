@@ -172,9 +172,22 @@ sudo reboot
 ### No SMS Received
 
 - Verify SIM has credit/active plan
-- Check phone numbers include country code
-- Verify network signal
+- Check phone numbers include country code (must include country code, e.g., +48...)
+- Verify network signal and registration
 - Check logs for errors
+- Ensure SIM card PIN is unlocked (if PIN protected)
+
+### CMS ERROR 302
+
+This error typically means "Operation not allowed" and can be caused by:
+
+- **Network not registered**: Wait for network registration (check `AT+CREG?`)
+- **SIM card PIN locked**: Unlock SIM card using AT+CPIN command
+- **SIM card not properly inserted**: Check SIM card connection
+- **No network coverage**: Move to area with better signal
+- **SIM card expired/deactivated**: Check with your carrier
+
+The system now automatically checks network registration status during initialization.
 
 ## License
 

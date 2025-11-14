@@ -44,10 +44,20 @@ class PiGuard {
   private async setupTriggers(): Promise<void> {
     console.log("[PiGuard] Setting up GPIO triggers...");
 
+    if (process.platform !== "linux") {
+      console.warn(
+        `[PiGuard] GPIO is only supported on Linux (Raspberry Pi). Current platform: ${process.platform}`
+      );
+      console.warn("[PiGuard] GPIO triggers will not be available.");
+      return;
+    }
+
     const gpioConfig = this.config.getGPIOConfig();
 
     try {
       const { Gpio } = await import("onoff");
+
+      let successCount = 0;
 
       Object.entries(gpioConfig).forEach(([key, pin]) => {
         try {
@@ -75,6 +85,7 @@ class PiGuard {
           };
 
           console.log(`[PiGuard] ✓ ${triggerName} monitoring on GPIO ${pin}`);
+          successCount++;
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
@@ -82,17 +93,34 @@ class PiGuard {
             `[PiGuard] Failed to setup trigger ${key} on GPIO ${pin}:`,
             errorMessage
           );
-          console.error(
-            `[PiGuard] Make sure you're running on a Raspberry Pi with proper permissions`
-          );
+          if (
+            errorMessage.includes("EINVAL") ||
+            errorMessage.includes("write")
+          ) {
+            console.error(
+              `[PiGuard] This may indicate missing GPIO permissions or running on unsupported hardware.`
+            );
+            console.error(
+              `[PiGuard] Run: sudo usermod -a -G gpio $USER && sudo reboot`
+            );
+          }
         }
       });
 
-      console.log("[PiGuard] All triggers configured\n");
+      if (successCount > 0) {
+        console.log(
+          `[PiGuard] ${successCount} trigger(s) configured successfully\n`
+        );
+      } else {
+        console.warn(
+          "[PiGuard] No GPIO triggers configured. Check permissions.\n"
+        );
+      }
     } catch (error) {
-      console.error(
-        "[PiGuard] onoff module not available. GPIO features disabled."
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`[PiGuard] Failed to load GPIO module: ${errorMessage}`);
+      console.error("[PiGuard] GPIO features disabled.");
     }
   }
 
