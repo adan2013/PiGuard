@@ -134,21 +134,76 @@ function testSpecificPin() {
   }
 
   console.log(`7. Testing GPIO pin ${pin}...`);
-  let gpio = null;
+  
+  const { exec } = require("child_process");
+  const { promisify } = require("util");
+  const execAsync = promisify(exec);
+  
+  exec(`ls /sys/class/gpio/ | grep "^gpio${pin}$"`, async (error, stdout) => {
+    const alreadyExported = !error && stdout.trim() === `gpio${pin}`;
+    
+    if (alreadyExported) {
+      console.log(`   ⚠ GPIO ${pin} is already exported`);
+      try {
+        await execAsync(`echo ${pin} | sudo tee /sys/class/gpio/unexport`);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        console.log(`   ✓ Unexported GPIO ${pin}, will retry\n`);
+      } catch (e) {
+        console.log(`   ⚠ Could not unexport: ${e.message}\n`);
+      }
+    }
 
-  try {
-    gpio = new Gpio(pin, "in", "both", {
-      debounceTimeout: 10,
-    });
+    console.log(`8. Attempting manual export of GPIO ${pin}...`);
+    try {
+      const { stdout, stderr } = await execAsync(`echo ${pin} | tee /sys/class/gpio/export`);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      console.log(`   ✓ Manual export successful`);
+      
+      exec(`cat /sys/class/gpio/gpio${pin}/direction 2>/dev/null`, (error, stdout) => {
+        if (!error) {
+          console.log(`   ✓ Pin direction: ${stdout.trim()}`);
+        }
+      });
+      
+      exec(`cat /sys/class/gpio/gpio${pin}/value 2>/dev/null`, (error, stdout) => {
+        if (!error) {
+          console.log(`   ✓ Pin value: ${stdout.trim()}`);
+        }
+        console.log("");
+        testWithLibrary();
+      });
+    } catch (error) {
+      console.error(`   ❌ Manual export failed: ${error.message}`);
+      if (error.stderr) console.error(`   Error: ${error.stderr}`);
+      console.log("");
+      console.log(`   This suggests GPIO ${pin} may not be available on this system.`);
+      console.log(`   Possible reasons:`);
+      console.log(`   - Pin ${pin} is reserved by the system`);
+      console.log(`   - Pin ${pin} doesn't exist on this Raspberry Pi model`);
+      console.log(`   - Pin ${pin} is already in use by another driver`);
+      console.log(`\n   Try a different GPIO pin in your .env file (e.g., GPIO 2, 3, 4, 5, 6, 12, 13, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 27)\n`);
+      testWithLibrary();
+    }
+  });
 
-    const value = gpio.readSync();
-    console.log(`   ✓ GPIO ${pin} configured successfully`);
-    console.log(`   ✓ Current value: ${value}`);
-    console.log(`   ✓ Pin is ready for monitoring`);
+  function testWithLibrary() {
+    let gpio = null;
 
-    gpio.unexport();
-    console.log(`   ✓ Pin ${pin} unexported successfully\n`);
-  } catch (error) {
+    try {
+      console.log(`9. Testing with onoff library...`);
+      gpio = new Gpio(pin, "in", "both", {
+        debounceTimeout: 10,
+      });
+
+      const value = gpio.readSync();
+      console.log(`   ✓ GPIO ${pin} configured successfully with onoff library`);
+      console.log(`   ✓ Current value: ${value}`);
+      console.log(`   ✓ Pin is ready for monitoring`);
+
+      gpio.unexport();
+      console.log(`   ✓ Pin ${pin} unexported successfully\n`);
+      console.log(`✅ GPIO ${pin} is working correctly!\n`);
+    } catch (error) {
     console.error(`   ❌ Failed to configure GPIO ${pin}: ${error.message}`);
 
     if (error.code === "EINVAL" || error.errno === "EINVAL") {
