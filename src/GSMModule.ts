@@ -186,7 +186,7 @@ export class GSMModule {
       const csca = await this.sendCommand("AT+CSCA?", "+CSCA:");
       console.log("[CHECK] CSCA:", csca.trim());
 
-      await this.sendCommand(`AT+CMGS="${phoneNumber}"`, ">");
+      await this.sendCommand(`AT+CMGS="${phoneNumber}",145`, ">");
 
       await this.executeATCommand({
         command: message + String.fromCharCode(26),
