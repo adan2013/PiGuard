@@ -174,18 +174,11 @@ export class GSMModule {
     console.log(`[GSM] Sending SMS to ${phoneNumber}: ${message}`);
 
     try {
-      const creg = await this.sendCommand("AT+CREG?", "+CREG:");
-      console.log("[CHECK] CREG:", creg.trim());
-
-      const csq = await this.sendCommand("AT+CSQ", "+CSQ:");
-      console.log("[CHECK] CSQ:", csq.trim());
-
-      const cpin = await this.sendCommand("AT+CPIN?", "+CPIN:");
-      console.log("[CHECK] CPIN:", cpin.trim());
-
-      const csca = await this.sendCommand("AT+CSCA?", "+CSCA:");
-      console.log("[CHECK] CSCA:", csca.trim());
-
+      await this.sendCommand("AT+CMGF?", "+CMGF:");
+      await this.sendCommand("AT+CREG?", "+CREG:");
+      await this.sendCommand("AT+CSQ", "+CSQ:");
+      await this.sendCommand("AT+CPIN?", "+CPIN:");
+      await this.sendCommand("AT+CSCA?", "+CSCA:");
       await this.sendCommand(`AT+CMGS="${phoneNumber}",145`, ">");
 
       await this.executeATCommand({
