@@ -71,8 +71,8 @@ class PiGuard {
             await new Promise((resolve) => setTimeout(resolve, 100));
           } catch (e) {}
 
-          gpio = new Gpio(pin + GPIO_OFFSET, "in", "both", {
-            debounceTimeout: 10,
+          gpio = new Gpio(pin + GPIO_OFFSET, "in", "rising", {
+            debounceTimeout: 1000,
             reconfigureDirection: true,
           });
 
