@@ -128,11 +128,16 @@ export class GSMModule {
   private executeATCommand(commandObj: {
     command: string;
     expectedResponse: string;
+    skipCRLF?: boolean;
   }): Promise<string> {
     return new Promise((resolve, reject) => {
-      const { command, expectedResponse } = commandObj;
+      const { command, expectedResponse, skipCRLF } = commandObj;
 
-      console.log(`[GSM] >> ${command}`);
+      if (skipCRLF && command.includes(String.fromCharCode(26))) {
+        console.log(`[GSM] >> (RAW) ${command.replace(/\x1A/g, "<CTRL+Z>")}`);
+      } else {
+        console.log(`[GSM] >> ${command}`);
+      }
 
       this.responseBuffer = "";
 
@@ -149,7 +154,9 @@ export class GSMModule {
         reject,
       };
 
-      this.port!.write(command + "\r\n", (err) => {
+      const dataToWrite = skipCRLF ? command : command + "\r\n";
+
+      this.port!.write(dataToWrite, (err) => {
         if (err) {
           clearTimeout(timeoutHandle);
           this.pendingCommand = null;
@@ -169,11 +176,10 @@ export class GSMModule {
     try {
       await this.sendCommand(`AT+CMGS="${phoneNumber}"`, ">");
 
-      await this.delay(500);
-
       await this.executeATCommand({
         command: message + String.fromCharCode(26),
         expectedResponse: "OK",
+        skipCRLF: true,
       });
 
       console.log(`[GSM] SMS sent successfully to ${phoneNumber}`);
