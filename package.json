@@ -9,6 +9,7 @@
     "dev": "ts-node src/index.ts",
     "watch": "tsc --watch",
     "list-ports": "node scripts/list-ports.js",
+    "send-at": "node scripts/send-at-command.js",
     "pinout": "pinout"
   },
   "keywords": [
@@ -20,15 +21,16 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "serialport": "^12.0.0",
     "@serialport/parser-readline": "^12.0.0",
+    "dotenv": "^16.3.1",
     "onoff": "^6.0.3",
-    "dotenv": "^16.3.1"
+    "prompts": "^2.4.2",
+    "serialport": "^12.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/serialport": "^8.0.5",
-    "typescript": "^5.3.3",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }
