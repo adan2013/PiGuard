@@ -126,7 +126,7 @@ async function main() {
     }
 
     // Ask user to select a port
-    const portChoices = ports.map((p, index) => ({
+    const portChoices = ports.map((p) => ({
       title: `${p.path}${p.manufacturer ? ` (${p.manufacturer})` : ""}`,
       value: p.path,
       description: p.serialNumber
@@ -190,11 +190,8 @@ async function main() {
       }
 
       try {
-        const response = await sendCommand(command);
-        console.log(`\nResponse:\n${response}\n`);
-      } catch (error) {
-        console.error(`\nError: ${error.message}\n`);
-      }
+        await sendCommand(command);
+      } catch (error) {}
     }
   } catch (error) {
     console.error("Error:", error.message);

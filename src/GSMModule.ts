@@ -58,7 +58,8 @@ export class GSMModule {
       await this.sendCommand("ATE0", "OK");
       await this.sendCommand("AT+CMGF=1", "OK");
       await this.sendCommand("AT+CNMI=1,2,0,0,0", "OK");
-      await this.sendCommand(`AT+CSCA="+48790998250",145`, "OK");
+      await this.sendCommand(`AT+CSCS="GSM"`, "OK");
+      // await this.sendCommand(`AT+CSCA="+48790998250",145`, "OK");
 
       await this.checkNetworkRegistration();
 
