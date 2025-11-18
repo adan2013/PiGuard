@@ -189,6 +189,7 @@ export class GSMModule {
       console.log("[GSM] Sending SMS...");
       await this.sendCommand(`AT+CMGS="${phoneNumber}"`, ">");
 
+      await this.delay(1000);
       await this.executeATCommand({
         command: message + String.fromCharCode(26),
         expectedResponse: "OK",
