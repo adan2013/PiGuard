@@ -77,8 +77,6 @@ export class GSMModule {
 
   private handleResponse(data: string): void {
     const trimmedData = data.trim();
-    console.log(`[DATA BEFORE TRIM] "${data}"`);
-    console.log(`[BEFORE RETURN] "${trimmedData}"`);
 
     if (!trimmedData) return;
 
@@ -143,7 +141,7 @@ export class GSMModule {
       const { command, expectedResponse, skipCRLF } = commandObj;
 
       if (skipCRLF && command.includes(String.fromCharCode(26))) {
-        console.log(`[GSM] >> (RAW) ${command.replace(/\x1A/g, "<CTRL+Z>")}`);
+        console.log(`[GSM] >> ${command.replace(/\x1A/g, "<CTRL+Z>")}`);
       } else {
         console.log(`[GSM] >> ${command}`);
       }

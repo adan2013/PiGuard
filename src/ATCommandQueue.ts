@@ -24,12 +24,7 @@ export class ATCommandQueue {
         retries: 0,
         timestamp: Date.now(),
       };
-
       this.queue.push(commandObj);
-
-      console.log(
-        `[ATQueue] Added command: ${command} (Queue size: ${this.queue.length})`
-      );
 
       if (!this.processing) {
         this.processNext();
