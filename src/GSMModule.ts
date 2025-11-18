@@ -78,41 +78,50 @@ export class GSMModule {
   private handleResponse(data: string): void {
     const trimmedData = data.trim();
 
-    if (!trimmedData) return;
+    // KLUCZOWA POPRAWKA: Huawei wysyła najpierw pustą linię \r\n, potem samo ">" w osobnej linii
+    if (data.includes(">")) {
+      console.log("[GSM] << >"); // zawsze logujemy >
+      this.responseBuffer += ">\n";
+
+      // Natychmiastowe obsłużenie oczekiwania na ">"
+      if (this.pendingCommand && this.pendingCommand.expectedResponse === ">") {
+        clearTimeout(this.pendingCommand.timeoutHandle);
+        const pending = this.pendingCommand;
+        this.pendingCommand = null;
+        this.responseBuffer = ""; // czyścimy bufor po >
+        pending.resolve(">");
+      }
+      // Nie return – może być jeszcze inne dane w tej samej linii (rzadko, ale może)
+    }
+
+    if (!trimmedData) return; // pomijamy całkowicie puste linie (po obsłużeniu >)
 
     console.log(`[GSM] << ${trimmedData}`);
-
     this.responseBuffer += trimmedData + "\n";
 
-    if (this.pendingCommand) {
-      const { expectedResponse, timeoutHandle, resolve, reject } =
-        this.pendingCommand;
+    if (!this.pendingCommand) return;
 
-      if (trimmedData.includes("ERROR") || trimmedData.includes("FAIL")) {
-        clearTimeout(timeoutHandle);
-        this.pendingCommand = null;
-        reject(new Error(trimmedData));
-        return;
-      }
+    const { expectedResponse, timeoutHandle, resolve, reject } =
+      this.pendingCommand;
 
-      if (
-        trimmedData.includes(expectedResponse) ||
-        trimmedData === expectedResponse
-      ) {
-        clearTimeout(timeoutHandle);
-        const response = this.responseBuffer;
-        this.responseBuffer = "";
-        this.pendingCommand = null;
-        resolve(response);
-        return;
-      }
+    // Błędy
+    if (trimmedData.includes("ERROR") || trimmedData.includes("+CMS ERROR")) {
+      clearTimeout(timeoutHandle);
+      this.pendingCommand = null;
+      reject(new Error(trimmedData));
+      return;
+    }
 
-      if (expectedResponse === ">" && trimmedData === ">") {
-        clearTimeout(timeoutHandle);
-        this.pendingCommand = null;
-        resolve(">");
-        return;
-      }
+    // Normalne odpowiedzi (np. OK, +CMGF: 1, itd.)
+    if (
+      trimmedData.includes(expectedResponse) ||
+      trimmedData === expectedResponse
+    ) {
+      clearTimeout(timeoutHandle);
+      const fullResponse = this.responseBuffer.trim();
+      this.responseBuffer = "";
+      this.pendingCommand = null;
+      resolve(fullResponse);
     }
   }
 
@@ -189,6 +198,7 @@ export class GSMModule {
       console.log("[GSM] Sending SMS...");
       await this.sendCommand(`AT+CMGS="${phoneNumber}"`, ">");
 
+      await this.delay(100);
       await this.executeATCommand({
         command: message + String.fromCharCode(26),
         expectedResponse: "OK",
