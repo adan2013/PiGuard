@@ -77,6 +77,7 @@ export class GSMModule {
 
   private handleResponse(data: string): void {
     const trimmedData = data.trim();
+    console.log(`[BEFORE RETURN] ${trimmedData}`);
 
     if (!trimmedData) return;
 
@@ -189,7 +190,7 @@ export class GSMModule {
       console.log("[GSM] Sending SMS...");
       await this.sendCommand(`AT+CMGS="${phoneNumber}"`, ">");
 
-      await this.delay(1000);
+      await this.delay(600);
       await this.executeATCommand({
         command: message + String.fromCharCode(26),
         expectedResponse: "OK",
