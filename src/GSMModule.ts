@@ -77,7 +77,8 @@ export class GSMModule {
 
   private handleResponse(data: string): void {
     const trimmedData = data.trim();
-    console.log(`[BEFORE RETURN] ${trimmedData}`);
+    console.log(`[DATA BEFORE TRIM] "${data}"`);
+    console.log(`[BEFORE RETURN] "${trimmedData}"`);
 
     if (!trimmedData) return;
 
