@@ -2,7 +2,7 @@ import { QueueStatus } from "./queue.types";
 
 export interface PendingCommand {
   command: string;
-  expectedResponse: string;
+  expectedResponse: string | null;
   timeoutHandle: NodeJS.Timeout;
   resolve: (value: string) => void;
   reject: (reason: Error) => void;
@@ -19,4 +19,3 @@ export interface GSMStatus {
   portOpen: boolean;
   queueStatus: QueueStatus;
 }
-

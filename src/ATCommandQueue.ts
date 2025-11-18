@@ -13,7 +13,7 @@ export class ATCommandQueue {
 
   public add(
     command: string,
-    expectedResponse: string = "OK"
+    expectedResponse: string | null = "OK"
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       const commandObj: CommandObject = {

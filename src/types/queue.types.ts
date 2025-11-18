@@ -1,6 +1,6 @@
 export interface CommandObject {
   command: string;
-  expectedResponse: string;
+  expectedResponse: string | null;
   resolve: (value: string) => void;
   reject: (reason: Error) => void;
   retries: number;

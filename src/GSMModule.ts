@@ -90,6 +90,11 @@ export class GSMModule {
       const { expectedResponse, timeoutHandle, resolve, reject } =
         this.pendingCommand;
 
+      // If expectedResponse is null, we shouldn't have a pending command
+      if (expectedResponse === null) {
+        return;
+      }
+
       if (trimmedData.includes("ERROR") || trimmedData.includes("FAIL")) {
         clearTimeout(timeoutHandle);
         this.pendingCommand = null;
@@ -120,7 +125,7 @@ export class GSMModule {
 
   public sendCommand(
     command: string,
-    expectedResponse: string = "OK"
+    expectedResponse: string | null = "OK"
   ): Promise<string> {
     if (!this.port || !this.port.isOpen) {
       return Promise.reject(new Error("Serial port not open"));
@@ -131,7 +136,7 @@ export class GSMModule {
 
   private executeATCommand(commandObj: {
     command: string;
-    expectedResponse: string;
+    expectedResponse: string | null;
     skipCRLF?: boolean;
   }): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -145,6 +150,20 @@ export class GSMModule {
 
       this.responseBuffer = "";
 
+      const dataToWrite = skipCRLF ? command : command + "\r\n";
+
+      // If expectedResponse is null, don't wait for response, resolve immediately
+      if (expectedResponse === null) {
+        this.port!.write(dataToWrite, (err) => {
+          if (err) {
+            reject(new Error(`Failed to write command: ${err.message}`));
+          } else {
+            resolve("");
+          }
+        });
+        return;
+      }
+
       const timeoutHandle = setTimeout(() => {
         this.pendingCommand = null;
         reject(new Error(`Command timeout: ${command}`));
@@ -157,8 +176,6 @@ export class GSMModule {
         resolve,
         reject,
       };
-
-      const dataToWrite = skipCRLF ? command : command + "\r\n";
 
       this.port!.write(dataToWrite, (err) => {
         if (err) {
@@ -189,7 +206,7 @@ export class GSMModule {
       console.log("[GSM] Checking SC Address...");
       await this.sendCommand("AT+CSCA?", "+CSCA:");
       console.log("[GSM] Sending SMS...");
-      await this.sendCommand(`AT+CMGS="${phoneNumber}"`, ">");
+      await this.sendCommand(`AT+CMGS="${phoneNumber}"`, null);
 
       await this.delay(600);
       await this.executeATCommand({
