@@ -8,6 +8,8 @@ export class Config {
   public readonly phoneNumbers: string[];
   public readonly atCommandTimeout: number;
   public readonly atCommandRetry: number;
+  public readonly disableWelcomeSMS: boolean;
+  public readonly disableAlertSMS: boolean;
 
   constructor() {
     this.serialPort = process.env.SERIAL_PORT || "/dev/ttyUSB0";
@@ -32,6 +34,9 @@ export class Config {
       10
     );
     this.atCommandRetry = parseInt(process.env.AT_COMMAND_RETRY || "3", 10);
+
+    this.disableWelcomeSMS = process.env.DISABLE_WELCOME_SMS === "1";
+    this.disableAlertSMS = process.env.DISABLE_ALERT_SMS === "1";
 
     this.validate();
   }
@@ -87,6 +92,14 @@ export class Config {
     return this.phoneNumbers;
   }
 
+  public isWelcomeSMSDisabled(): boolean {
+    return this.disableWelcomeSMS;
+  }
+
+  public isAlertSMSDisabled(): boolean {
+    return this.disableAlertSMS;
+  }
+
   public display(): void {
     console.log("\n=== PiGuard Configuration ===");
     console.log(`Serial Port: ${this.serialPort}`);
@@ -104,6 +117,10 @@ export class Config {
     console.log(`\nPhone Numbers: ${this.phoneNumbers.join(", ")}`);
     console.log(`AT Command Timeout: ${this.atCommandTimeout}ms`);
     console.log(`AT Command Retry: ${this.atCommandRetry}`);
+    console.log(
+      `Welcome SMS: ${this.disableWelcomeSMS ? "DISABLED" : "ENABLED"}`
+    );
+    console.log(`Alert SMS: ${this.disableAlertSMS ? "DISABLED" : "ENABLED"}`);
     console.log("=============================\n");
   }
 }

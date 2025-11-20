@@ -25,6 +25,26 @@ export class GSMModule {
     this.commandQueue.setExecutor(this.executeATCommand.bind(this));
   }
 
+  public async performConnectionTest() {
+    try {
+      console.log("[GSM] Checking PIN...");
+      await this.sendCommand("AT+CPIN?", "+CPIN:");
+      console.log("[GSM] Checking mode...");
+      await this.sendCommand("AT+CMGF?", "+CMGF:");
+      console.log("[GSM] Checking network registration...");
+      await this.sendCommand("AT+CREG?", "+CREG:");
+      console.log("[GSM] Checking signal quality...");
+      await this.sendCommand("AT+CSQ", "+CSQ:");
+      console.log("[GSM] Checking SC Address...");
+      await this.sendCommand("AT+CSCA?", "+CSCA:");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error("[GSM] Connection test failed:", errorMessage);
+      throw error;
+    }
+  }
+
   public async initialize(): Promise<boolean> {
     console.log("[GSM] Initializing GSM module...");
 
@@ -59,9 +79,7 @@ export class GSMModule {
       await this.sendCommand("AT+CMGF=1", "OK");
       await this.sendCommand("AT+CNMI=1,2,0,0,0", "OK");
       await this.sendCommand(`AT+CSCS="GSM"`, "OK");
-      // await this.sendCommand(`AT+CSCA="+48790998250",145`, "OK");
-
-      await this.checkNetworkRegistration();
+      await this.performConnectionTest();
 
       this.isReady = true;
       console.log("[GSM] GSM module initialized successfully");
@@ -193,16 +211,7 @@ export class GSMModule {
     console.log(`[GSM] Sending SMS to ${phoneNumber}: ${message}`);
 
     try {
-      console.log("[GSM] Checking mode...");
-      await this.sendCommand("AT+CMGF?", "+CMGF:");
-      console.log("[GSM] Checking network registration...");
-      await this.sendCommand("AT+CREG?", "+CREG:");
-      console.log("[GSM] Checking signal quality...");
-      await this.sendCommand("AT+CSQ", "+CSQ:");
-      console.log("[GSM] Checking PIN...");
-      await this.sendCommand("AT+CPIN?", "+CPIN:");
-      console.log("[GSM] Checking SC Address...");
-      await this.sendCommand("AT+CSCA?", "+CSCA:");
+      await this.performConnectionTest();
       console.log("[GSM] Sending SMS...");
       await this.sendCommand(`AT+CMGS="${phoneNumber}"`, null);
 
@@ -276,12 +285,6 @@ export class GSMModule {
 
     this.isReady = false;
     console.log("[GSM] GSM module closed");
-  }
-
-  private async checkNetworkRegistration(): Promise<void> {
-    try {
-      await this.sendCommand("AT+CREG?", "OK");
-    } catch (error) {}
   }
 
   private delay(ms: number): Promise<void> {
