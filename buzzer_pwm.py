@@ -48,12 +48,14 @@ def main() -> None:
   mode = sys.argv[1].lower()
 
   GPIO.setmode(GPIO.BCM)
+  GPIO.setwarnings(False)
   GPIO.setup(BUZZER_GPIO, GPIO.OUT)
 
-  pwm = GPIO.PWM(BUZZER_GPIO, DEFAULT_FREQUENCY_HZ)
-  pwm.start(0)  # Start PWM with 0 duty cycle (silent)
-
+  pwm = None
   try:
+    pwm = GPIO.PWM(BUZZER_GPIO, DEFAULT_FREQUENCY_HZ)
+    pwm.start(0)  # Start PWM with 0 duty cycle (silent)
+
     if mode == "single":
       single_beep(pwm)
     elif mode == "double":
@@ -66,9 +68,17 @@ def main() -> None:
       print("Unknown mode. Use one of: single, double, melody")
 
   finally:
-    pwm.ChangeDutyCycle(0)  # Ensure silence
-    pwm.stop()
-    GPIO.cleanup()
+    if pwm is not None:
+      try:
+        pwm.ChangeDutyCycle(0)
+      except:
+        pass
+      try:
+        pwm.stop()
+      except:
+        pass
+      del pwm  # Delete the PWM object before cleanup
+    GPIO.cleanup(BUZZER_GPIO)  # Only cleanup the specific GPIO
 
 
 if __name__ == "__main__":
