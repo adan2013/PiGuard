@@ -20,13 +20,6 @@ def play_tone(pwm: GPIO.PWM, duration_s: float, frequency_hz: int) -> None:
 def single_beep(pwm: GPIO.PWM) -> None:
   play_tone(pwm, 0.15, DEFAULT_FREQUENCY_HZ)
 
-
-def double_beep(pwm: GPIO.PWM) -> None:
-  play_tone(pwm, 0.15, DEFAULT_FREQUENCY_HZ)
-  time.sleep(0.10)
-  play_tone(pwm, 0.15, DEFAULT_FREQUENCY_HZ)
-
-
 def melody_up(pwm: GPIO.PWM) -> None:
   notes = [
     int(DEFAULT_FREQUENCY_HZ * 0.75),
@@ -54,12 +47,14 @@ def main() -> None:
   pwm = None
   try:
     pwm = GPIO.PWM(BUZZER_GPIO, DEFAULT_FREQUENCY_HZ)
-    pwm.start(0)  # Start PWM with 0 duty cycle (silent)
+    pwm.start(0)
 
     if mode == "single":
       single_beep(pwm)
     elif mode == "double":
-      double_beep(pwm)
+      single_beep(pwm)
+      time.sleep(0.1)
+      single_beep(pwm)
     elif mode == "melody":
       melody_up(pwm)
       time.sleep(1)
@@ -77,8 +72,8 @@ def main() -> None:
         pwm.stop()
       except:
         pass
-      del pwm  # Delete the PWM object before cleanup
-    GPIO.cleanup(BUZZER_GPIO)  # Only cleanup the specific GPIO
+      del pwm
+    GPIO.cleanup(BUZZER_GPIO)
 
 
 if __name__ == "__main__":
