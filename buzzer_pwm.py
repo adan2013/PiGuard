@@ -60,6 +60,8 @@ def main() -> None:
       double_beep(pwm)
     elif mode == "melody":
       melody_up(pwm)
+      time.sleep(1)
+      melody_up(pwm)
     else:
       print("Unknown mode. Use one of: single, double, melody")
 
