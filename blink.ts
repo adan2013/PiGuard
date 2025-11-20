@@ -7,6 +7,7 @@ const BUZZER_GPIO = 24 + GPIO_OFFSET;
 let led: Gpio | null = null;
 let buzzer: Gpio | null = null;
 let blinkInterval: NodeJS.Timeout | null = null;
+let toneInterval: NodeJS.Timeout | null = null;
 
 function startBlink() {
   try {
@@ -26,24 +27,69 @@ function startBlink() {
   }
 }
 
+function playTone(
+  durationMs: number,
+  frequencyHz: number,
+  onDone?: () => void
+) {
+  try {
+    if (!buzzer) {
+      buzzer = new Gpio(BUZZER_GPIO, "out");
+    }
+
+    const halfPeriodMs = 500 / frequencyHz; // half period in ms (since JS timers are ~1ms resolution)
+    let state: 0 | 1 = 0;
+
+    if (toneInterval) {
+      clearInterval(toneInterval);
+    }
+
+    toneInterval = setInterval(() => {
+      state = state === 0 ? 1 : 0;
+      buzzer?.writeSync(state);
+    }, halfPeriodMs);
+
+    setTimeout(() => {
+      if (toneInterval) {
+        clearInterval(toneInterval);
+        toneInterval = null;
+      }
+      buzzer?.writeSync(0);
+      onDone?.();
+    }, durationMs);
+  } catch (error) {
+    console.error("[Experiment] Error playing tone on buzzer:", error);
+    if (toneInterval) {
+      clearInterval(toneInterval);
+      toneInterval = null;
+    }
+    try {
+      buzzer?.writeSync(0);
+    } catch {
+      // ignore
+    }
+    onDone?.();
+  }
+}
+
 function playStartupDoubleBeep() {
   try {
-    buzzer = new Gpio(BUZZER_GPIO, "out");
+    if (!buzzer) {
+      buzzer = new Gpio(BUZZER_GPIO, "out");
+    }
 
-    const beepOn = () => buzzer?.writeSync(1);
-    const beepOff = () => buzzer?.writeSync(0);
+    const toneDuration = 150; // ms
+    const gapDuration = 100; // ms
+    const frequencyHz = 500; // Hz, suitable for JS timer resolution
 
-    // Double quick beep pattern: on 150ms, off 100ms, on 150ms, off
-    beepOn();
-    setTimeout(() => {
-      beepOff();
+    // First tone
+    playTone(toneDuration, frequencyHz, () => {
+      // Gap between beeps
       setTimeout(() => {
-        beepOn();
-        setTimeout(() => {
-          beepOff();
-        }, 150);
-      }, 100);
-    }, 150);
+        // Second tone
+        playTone(toneDuration, frequencyHz);
+      }, gapDuration);
+    });
 
     console.log(
       `[Experiment] Playing startup double beep on GPIO 24 (actual pin ${BUZZER_GPIO})`
@@ -56,6 +102,10 @@ function playStartupDoubleBeep() {
 const cleanup = () => {
   if (blinkInterval) {
     clearInterval(blinkInterval);
+  }
+  if (toneInterval) {
+    clearInterval(toneInterval);
+    toneInterval = null;
   }
   if (led) {
     try {
