@@ -12,9 +12,9 @@ DUTY_CYCLE = 50
 
 def play_tone(pwm: GPIO.PWM, duration_s: float, frequency_hz: int) -> None:
   pwm.ChangeFrequency(frequency_hz)
-  pwm.start(DUTY_CYCLE)
+  pwm.ChangeDutyCycle(DUTY_CYCLE)
   time.sleep(duration_s)
-  pwm.stop()
+  pwm.ChangeDutyCycle(0)
 
 
 def single_beep(pwm: GPIO.PWM) -> None:
@@ -51,6 +51,7 @@ def main() -> None:
   GPIO.setup(BUZZER_GPIO, GPIO.OUT)
 
   pwm = GPIO.PWM(BUZZER_GPIO, DEFAULT_FREQUENCY_HZ)
+  pwm.start(0)  # Start PWM with 0 duty cycle (silent)
 
   try:
     if mode == "single":
@@ -65,9 +66,8 @@ def main() -> None:
       print("Unknown mode. Use one of: single, double, melody")
 
   finally:
+    pwm.ChangeDutyCycle(0)  # Ensure silence
     pwm.stop()
-    time.sleep(0.1)
-    GPIO.output(BUZZER_GPIO, GPIO.LOW)
     GPIO.cleanup()
 
 
