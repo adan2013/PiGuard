@@ -5,9 +5,9 @@ import time
 
 import RPi.GPIO as GPIO
 
-BUZZER_GPIO = 24  # BCM pin number
-DEFAULT_FREQUENCY_HZ = 2000  # base tone frequency
-DUTY_CYCLE = 50  # percent
+BUZZER_GPIO = 24
+DEFAULT_FREQUENCY_HZ = 2000
+DUTY_CYCLE = 50
 
 
 def play_tone(pwm: GPIO.PWM, duration_s: float, frequency_hz: int) -> None:
@@ -28,7 +28,6 @@ def double_beep(pwm: GPIO.PWM) -> None:
 
 
 def melody_up(pwm: GPIO.PWM) -> None:
-  # Simple ascending tones
   notes = [
     int(DEFAULT_FREQUENCY_HZ * 0.75),
     int(DEFAULT_FREQUENCY_HZ * 0.9),
@@ -66,6 +65,8 @@ def main() -> None:
       print("Unknown mode. Use one of: single, double, melody")
 
   finally:
+    pwm.stop()
+    time.sleep(0.1)
     GPIO.output(BUZZER_GPIO, GPIO.LOW)
     GPIO.cleanup()
 
