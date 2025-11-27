@@ -8,8 +8,10 @@ export class PiGuard {
   private gsm: GSMModule;
   private frontPanel: FrontPanel;
   private triggers: Record<string, TriggerInfo> = {};
+  private activeTriggers: Set<string> = new Set();
   private isRunning: boolean = false;
   private lastAlertTime: number = 0;
+  private alertsDisabled: boolean = false;
 
   constructor() {
     this.config = new Config();
@@ -28,12 +30,13 @@ export class PiGuard {
       await this.gsm.initialize();
       await this.frontPanel.initialize();
       await this.setupTriggers();
+      this.setupFrontPanelHandlers();
 
       this.isRunning = true;
-      this.frontPanel.setLedState(LedState.SlowFlash);
-      this.frontPanel.playSingleBeep();
-      console.log("[PiGuard] System ready and monitoring...\n");
 
+      this.frontPanel.playLongBeep();
+      this.updateLedState();
+      console.log("[PiGuard] System ready and monitoring...\n");
       await this.sendStartupNotification();
     } catch (error) {
       const errorMessage =
@@ -75,7 +78,7 @@ export class PiGuard {
             await new Promise((resolve) => setTimeout(resolve, 100));
           } catch (e) {}
 
-          gpio = new Gpio(pin + this.config.gpioLegacyOffset, "in", "rising", {
+          gpio = new Gpio(pin + this.config.gpioLegacyOffset, "in", "both", {
             debounceTimeout: 1000,
             reconfigureDirection: true,
           });
@@ -90,14 +93,22 @@ export class PiGuard {
             }
 
             if (value === 1) {
-              this.handleTrigger(key, triggerName);
+              this.activeTriggers.add(key);
+              this.handleTrigger(triggerName);
+            } else if (value === 0) {
+              this.activeTriggers.delete(key);
             }
+            this.updateLedState();
           });
 
           const initialValue = gpio.readSync();
           console.log(
             `[PiGuard] ✓ ${triggerName} monitoring on GPIO ${pin} (initial state: ${initialValue})`
           );
+
+          if (initialValue === 1) {
+            this.activeTriggers.add(key);
+          }
 
           this.triggers[key] = {
             gpio,
@@ -132,10 +143,7 @@ export class PiGuard {
     }
   }
 
-  private async handleTrigger(
-    _triggerKey: string,
-    triggerName: string
-  ): Promise<void> {
+  private async handleTrigger(triggerName: string): Promise<void> {
     const timestamp = new Date().toISOString();
     console.log(`\n[ALERT] ${timestamp} - ${triggerName} TRIGGERED!`);
 
@@ -144,6 +152,7 @@ export class PiGuard {
       return;
     }
 
+    this.frontPanel.playMelodyUp();
     this.lastAlertTime = Date.now();
 
     if (this.config.disableAlertSMS) {
@@ -175,10 +184,44 @@ export class PiGuard {
   }
 
   private isInCooldown(): boolean {
+    if (this.alertsDisabled) return true;
     if (this.lastAlertTime === 0) return false;
 
     const elapsed = Date.now() - this.lastAlertTime;
     return elapsed < this.config.smsCooldownPeriod;
+  }
+
+  private setupFrontPanelHandlers(): void {
+    this.frontPanel.onSwitch1Pressed(() => {
+      this.alertsDisabled = true;
+      this.frontPanel.playSingleBeep();
+      this.frontPanel.setLedState(LedState.SolidOn);
+    });
+    this.frontPanel.onSwitch1Released(() => {
+      this.alertsDisabled = false;
+      this.lastAlertTime = Date.now(); // Prevent immediate alert SMS
+      this.frontPanel.playSingleBeep();
+      this.updateLedState();
+    });
+    this.frontPanel.onSwitch2ShortPress(() => {
+      this.frontPanel.playDoubleBeep();
+      // TODO: Add functionality here
+    });
+    this.frontPanel.onSwitch2LongPress(() => {
+      this.frontPanel.playMelodyDown();
+      // TODO: Add functionality here
+    });
+  }
+
+  private updateLedState(): void {
+    if (this.alertsDisabled) {
+      return; // Alredy in SolidOn state
+    }
+    if (this.activeTriggers.size > 0) {
+      this.frontPanel.setLedState(LedState.SlowBlink);
+    } else {
+      this.frontPanel.setLedState(LedState.SlowFlash);
+    }
   }
 
   private async sendStartupNotification(): Promise<void> {

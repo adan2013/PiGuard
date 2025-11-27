@@ -19,11 +19,6 @@ export enum SpeakerSound {
   MelodyDown = "melody_down",
 }
 
-export enum SwitchPressType {
-  Short = "Short",
-  Long = "Long",
-}
-
 export class FrontPanel {
   private config: Config;
 
