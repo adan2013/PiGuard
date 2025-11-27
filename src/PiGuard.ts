@@ -30,7 +30,7 @@ export class PiGuard {
       await this.setupTriggers();
 
       this.isRunning = true;
-      this.frontPanel.setLedState(LedState.FastBlink);
+      this.frontPanel.setLedState(LedState.SlowFlash);
       console.log("[PiGuard] System ready and monitoring...\n");
 
       await this.sendStartupNotification();
