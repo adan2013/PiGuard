@@ -1,12 +1,12 @@
 import { Config } from "./Config";
+import { FrontPanel, LedState } from "./FrontPanel";
 import { GSMModule } from "./GSMModule";
 import { TriggerInfo, SystemStatus, SMSResult, GpioPins } from "./types";
-
-const GPIO_OFFSET = 512;
 
 export class PiGuard {
   private config: Config;
   private gsm: GSMModule;
+  private frontPanel: FrontPanel;
   private triggers: Record<string, TriggerInfo> = {};
   private isRunning: boolean = false;
   private lastAlertTime: number = 0;
@@ -15,6 +15,7 @@ export class PiGuard {
   constructor() {
     this.config = new Config();
     this.gsm = new GSMModule(this.config);
+    this.frontPanel = new FrontPanel(this.config);
   }
 
   public async initialize(): Promise<void> {
@@ -29,6 +30,7 @@ export class PiGuard {
       await this.setupTriggers();
 
       this.isRunning = true;
+      this.frontPanel.setLedState(LedState.SlowBlink);
       console.log("[PiGuard] System ready and monitoring...\n");
 
       await this.sendStartupNotification();
@@ -64,15 +66,24 @@ export class PiGuard {
 
         try {
           try {
-            const existingGpio = new Gpio(pin + GPIO_OFFSET, "in", "none");
+            const existingGpio = new Gpio(
+              pin + this.config.getGpioLegacyOffset(),
+              "in",
+              "none"
+            );
             existingGpio.unexport();
             await new Promise((resolve) => setTimeout(resolve, 100));
           } catch (e) {}
 
-          gpio = new Gpio(pin + GPIO_OFFSET, "in", "rising", {
-            debounceTimeout: 1000,
-            reconfigureDirection: true,
-          });
+          gpio = new Gpio(
+            pin + this.config.getGpioLegacyOffset(),
+            "in",
+            "rising",
+            {
+              debounceTimeout: 1000,
+              reconfigureDirection: true,
+            }
+          );
 
           gpio.watch((err: Error | null | undefined, value: number) => {
             if (err) {

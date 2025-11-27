@@ -15,3 +15,9 @@ export interface TriggerNames {
   trigger3: string;
 }
 
+export interface FrontPanelGpioPins {
+  led: number;
+  speaker: number;
+  switch1: number;
+  switch2: number;
+}

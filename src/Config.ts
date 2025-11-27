@@ -1,15 +1,23 @@
-import { SerialConfig, GpioPins, TriggerNames } from "./types";
+import {
+  SerialConfig,
+  GpioPins,
+  TriggerNames,
+  FrontPanelGpioPins,
+} from "./types";
 
 export class Config {
   public readonly serialPort: string;
   public readonly serialBaudrate: number;
   public readonly gpioPins: GpioPins;
+  public readonly frontPanelGpioPins: FrontPanelGpioPins;
   public readonly triggerNames: TriggerNames;
   public readonly phoneNumbers: string[];
   public readonly atCommandTimeout: number;
   public readonly atCommandRetry: number;
   public readonly disableWelcomeSMS: boolean;
   public readonly disableAlertSMS: boolean;
+  public readonly smsCooldownPeriod: number;
+  public readonly gpioLegacyOffset: number;
 
   constructor() {
     this.serialPort = process.env.SERIAL_PORT || "/dev/ttyUSB0";
@@ -19,6 +27,13 @@ export class Config {
       trigger1: parseInt(process.env.GPIO_TRIGGER_1 || "17", 10),
       trigger2: parseInt(process.env.GPIO_TRIGGER_2 || "27", 10),
       trigger3: parseInt(process.env.GPIO_TRIGGER_3 || "22", 10),
+    };
+
+    this.frontPanelGpioPins = {
+      led: parseInt(process.env.GPIO_LED || "8", 10),
+      speaker: parseInt(process.env.GPIO_SPK || "7", 10),
+      switch1: parseInt(process.env.GPIO_SW1 || "19", 10),
+      switch2: parseInt(process.env.GPIO_SW2 || "26", 10),
     };
 
     this.triggerNames = {
@@ -37,6 +52,16 @@ export class Config {
 
     this.disableWelcomeSMS = process.env.DISABLE_WELCOME_SMS === "1";
     this.disableAlertSMS = process.env.DISABLE_ALERT_SMS === "1";
+
+    this.smsCooldownPeriod = parseInt(
+      process.env.SMS_COOLDOWN_PERIOD || "300000",
+      10
+    );
+
+    this.gpioLegacyOffset = parseInt(
+      process.env.GPIO_LEGACY_OFFSET || "512",
+      10
+    );
 
     this.validate();
   }
@@ -84,6 +109,10 @@ export class Config {
     return this.gpioPins;
   }
 
+  public getFrontPanelGPIOConfig(): FrontPanelGpioPins {
+    return this.frontPanelGpioPins;
+  }
+
   public getTriggerName(triggerKey: keyof TriggerNames): string {
     return this.triggerNames[triggerKey] || "Unknown Trigger";
   }
@@ -100,6 +129,14 @@ export class Config {
     return this.disableAlertSMS;
   }
 
+  public getSmsCooldownPeriod(): number {
+    return this.smsCooldownPeriod;
+  }
+
+  public getGpioLegacyOffset(): number {
+    return this.gpioLegacyOffset;
+  }
+
   public display(): void {
     console.log("\n=== PiGuard Configuration ===");
     console.log(`Serial Port: ${this.serialPort}`);
@@ -114,6 +151,11 @@ export class Config {
     console.log(
       `  Trigger 3 (${this.triggerNames.trigger3}): GPIO ${this.gpioPins.trigger3}`
     );
+    console.log("\nFront Panel GPIO:");
+    console.log(`  LED: GPIO ${this.frontPanelGpioPins.led}`);
+    console.log(`  Speaker: GPIO ${this.frontPanelGpioPins.speaker}`);
+    console.log(`  Switch 1: GPIO ${this.frontPanelGpioPins.switch1}`);
+    console.log(`  Switch 2: GPIO ${this.frontPanelGpioPins.switch2}`);
     console.log(`\nPhone Numbers: ${this.phoneNumbers.join(", ")}`);
     console.log(`AT Command Timeout: ${this.atCommandTimeout}ms`);
     console.log(`AT Command Retry: ${this.atCommandRetry}`);
@@ -121,6 +163,11 @@ export class Config {
       `Welcome SMS: ${this.disableWelcomeSMS ? "DISABLED" : "ENABLED"}`
     );
     console.log(`Alert SMS: ${this.disableAlertSMS ? "DISABLED" : "ENABLED"}`);
+    console.log(
+      `SMS Cooldown Period: ${this.smsCooldownPeriod}ms (${
+        this.smsCooldownPeriod / 60000
+      } minutes)`
+    );
     console.log("=============================\n");
   }
 }
