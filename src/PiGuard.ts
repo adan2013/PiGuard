@@ -31,6 +31,7 @@ export class PiGuard {
 
       this.isRunning = true;
       this.frontPanel.setLedState(LedState.SlowFlash);
+      this.frontPanel.playSingleBeep();
       console.log("[PiGuard] System ready and monitoring...\n");
 
       await this.sendStartupNotification();
