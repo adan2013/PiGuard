@@ -39,6 +39,7 @@ export class FrontPanel {
   private switch2LongPressTriggered: boolean = false;
   private readonly LONG_PRESS_THRESHOLD_MS = 2000;
 
+  private switch1PreviousState: number | null = null;
   private switch1Pressed: (() => void) | null = null;
   private switch1Released: (() => void) | null = null;
   private switch2ShortPress: (() => void) | null = null;
@@ -223,11 +224,28 @@ export class FrontPanel {
   private setupSwitch1Watcher(): void {
     if (!this.switch1) return;
 
+    try {
+      this.switch1PreviousState = this.switch1.readSync();
+    } catch (error) {
+      console.error(
+        "[FrontPanel] Error reading initial switch 1 state:",
+        error
+      );
+      this.switch1PreviousState = null;
+    }
+
     this.switch1.watch((err, value) => {
       if (err) {
         console.error("[FrontPanel] Switch 1 watch error:", err);
         return;
       }
+
+      if (this.switch1PreviousState === value) {
+        return;
+      }
+
+      this.switch1PreviousState = value;
+
       if (value === 0) {
         console.log("[FrontPanel] Switch 1: State changed to 0 (pressed)");
         this.switch1Pressed?.();
