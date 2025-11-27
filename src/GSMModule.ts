@@ -49,10 +49,9 @@ export class GSMModule {
     console.log("[GSM] Initializing GSM module...");
 
     try {
-      const serialConfig = this.config.getSerialConfig();
       this.port = new SerialPort({
-        path: serialConfig.path,
-        baudRate: serialConfig.baudRate,
+        path: this.config.serialPort,
+        baudRate: this.config.serialBaudrate,
         autoOpen: false,
       });
 
@@ -236,7 +235,7 @@ export class GSMModule {
   }
 
   public async sendAlert(triggerName: string): Promise<SMSResult[]> {
-    const phoneNumbers = this.config.getPhoneNumbers();
+    const phoneNumbers = this.config.phoneNumbers;
 
     if (phoneNumbers.length === 0) {
       return [];

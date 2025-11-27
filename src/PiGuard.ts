@@ -10,7 +10,6 @@ export class PiGuard {
   private triggers: Record<string, TriggerInfo> = {};
   private isRunning: boolean = false;
   private lastAlertTime: number = 0;
-  private cooldownPeriod: number = 5 * 60 * 1000;
 
   constructor() {
     this.config = new Config();
@@ -55,21 +54,20 @@ export class PiGuard {
       return;
     }
 
-    const gpioConfig = this.config.getGPIOConfig();
-
     try {
       const { Gpio } = await import("onoff");
 
       let successCount = 0;
 
-      for (const [key, pin] of Object.entries(gpioConfig)) {
-        const triggerName = this.config.getTriggerName(key as keyof GpioPins);
+      for (const [key, pin] of Object.entries(this.config.gpioPins)) {
+        const triggerName =
+          this.config.triggerNames[key as keyof GpioPins] || "Unknown Trigger";
         let gpio: any = null;
 
         try {
           try {
             const existingGpio = new Gpio(
-              pin + this.config.getGpioLegacyOffset(),
+              pin + this.config.gpioLegacyOffset,
               "in",
               "none"
             );
@@ -77,15 +75,10 @@ export class PiGuard {
             await new Promise((resolve) => setTimeout(resolve, 100));
           } catch (e) {}
 
-          gpio = new Gpio(
-            pin + this.config.getGpioLegacyOffset(),
-            "in",
-            "rising",
-            {
-              debounceTimeout: 1000,
-              reconfigureDirection: true,
-            }
-          );
+          gpio = new Gpio(pin + this.config.gpioLegacyOffset, "in", "rising", {
+            debounceTimeout: 1000,
+            reconfigureDirection: true,
+          });
 
           gpio.watch((err: Error | null | undefined, value: number) => {
             if (err) {
@@ -153,7 +146,7 @@ export class PiGuard {
 
     this.lastAlertTime = Date.now();
 
-    if (this.config.isAlertSMSDisabled()) {
+    if (this.config.disableAlertSMS) {
       console.log(`[PiGuard] Alert SMS is disabled, skipping SMS sending`);
       console.log("");
       return;
@@ -185,11 +178,11 @@ export class PiGuard {
     if (this.lastAlertTime === 0) return false;
 
     const elapsed = Date.now() - this.lastAlertTime;
-    return elapsed < this.cooldownPeriod;
+    return elapsed < this.config.smsCooldownPeriod;
   }
 
   private async sendStartupNotification(): Promise<void> {
-    if (this.config.isWelcomeSMSDisabled()) {
+    if (this.config.disableWelcomeSMS) {
       console.log(
         `[PiGuard] Welcome SMS is disabled, skipping startup notification`
       );
@@ -197,7 +190,7 @@ export class PiGuard {
     }
 
     try {
-      const phoneNumbers = this.config.getPhoneNumbers();
+      const phoneNumbers = this.config.phoneNumbers;
       if (phoneNumbers.length === 0) return;
 
       const message = `PiGuard surveillance system is now active at ${new Date().toLocaleString()}`;

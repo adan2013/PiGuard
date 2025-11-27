@@ -93,7 +93,7 @@ export class FrontPanel {
     this.stopLedPattern();
     this.currentLedState = state;
 
-    if (this.config.isLEDDisabled()) {
+    if (this.config.disableLED) {
       console.log(
         `[FrontPanel] LED state changed to: ${state} (LED disabled - logging only)`
       );
@@ -187,7 +187,7 @@ export class FrontPanel {
   }
 
   public async play(sound: SpeakerSound): Promise<void> {
-    if (this.config.isSoundDisabled()) {
+    if (this.config.disableSound) {
       console.log(
         `[FrontPanel] Sound: ${sound} (Sound disabled - logging only)`
       );

@@ -1,8 +1,3 @@
-export interface SerialConfig {
-  path: string;
-  baudRate: number;
-}
-
 export interface GpioPins {
   trigger1: number;
   trigger2: number;

@@ -1,9 +1,4 @@
-import {
-  SerialConfig,
-  GpioPins,
-  TriggerNames,
-  FrontPanelGpioPins,
-} from "./types";
+import { GpioPins, TriggerNames, FrontPanelGpioPins } from "./types";
 
 export class Config {
   public readonly serialPort: string;
@@ -100,53 +95,6 @@ export class Config {
         throw new Error(`Invalid GPIO pin configuration for ${key}: ${pin}`);
       }
     });
-  }
-
-  public getSerialConfig(): SerialConfig {
-    return {
-      path: this.serialPort,
-      baudRate: this.serialBaudrate,
-    };
-  }
-
-  public getGPIOConfig(): GpioPins {
-    return this.gpioPins;
-  }
-
-  public getFrontPanelGPIOConfig(): FrontPanelGpioPins {
-    return this.frontPanelGpioPins;
-  }
-
-  public getTriggerName(triggerKey: keyof TriggerNames): string {
-    return this.triggerNames[triggerKey] || "Unknown Trigger";
-  }
-
-  public getPhoneNumbers(): string[] {
-    return this.phoneNumbers;
-  }
-
-  public isWelcomeSMSDisabled(): boolean {
-    return this.disableWelcomeSMS;
-  }
-
-  public isAlertSMSDisabled(): boolean {
-    return this.disableAlertSMS;
-  }
-
-  public isLEDDisabled(): boolean {
-    return this.disableLED;
-  }
-
-  public isSoundDisabled(): boolean {
-    return this.disableSound;
-  }
-
-  public getSmsCooldownPeriod(): number {
-    return this.smsCooldownPeriod;
-  }
-
-  public getGpioLegacyOffset(): number {
-    return this.gpioLegacyOffset;
   }
 
   public display(): void {
