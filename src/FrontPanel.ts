@@ -25,6 +25,8 @@ export enum SwitchPressType {
 }
 
 export class FrontPanel {
+  private config: Config;
+
   private led: Gpio | null = null;
   private switch1: Gpio | null = null;
   private switch2: Gpio | null = null;
@@ -48,6 +50,7 @@ export class FrontPanel {
   private switch2LongPress: (() => void) | null = null;
 
   constructor(config: Config) {
+    this.config = config;
     this.ledPin = config.frontPanelGpioPins.led + config.gpioLegacyOffset;
     this.speakerBasePin = config.frontPanelGpioPins.speaker; // Python script will use pin without offset
     this.switch1Pin =
@@ -89,6 +92,13 @@ export class FrontPanel {
 
     this.stopLedPattern();
     this.currentLedState = state;
+
+    if (this.config.isLEDDisabled()) {
+      console.log(
+        `[FrontPanel] LED state changed to: ${state} (LED disabled - logging only)`
+      );
+      return;
+    }
 
     switch (state) {
       case LedState.Off:
@@ -177,6 +187,13 @@ export class FrontPanel {
   }
 
   public async play(sound: SpeakerSound): Promise<void> {
+    if (this.config.isSoundDisabled()) {
+      console.log(
+        `[FrontPanel] Sound: ${sound} (Sound disabled - logging only)`
+      );
+      return;
+    }
+
     try {
       await this.playSound(sound);
     } catch (error) {

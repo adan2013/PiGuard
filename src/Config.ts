@@ -16,6 +16,8 @@ export class Config {
   public readonly atCommandRetry: number;
   public readonly disableWelcomeSMS: boolean;
   public readonly disableAlertSMS: boolean;
+  public readonly disableLED: boolean;
+  public readonly disableSound: boolean;
   public readonly smsCooldownPeriod: number;
   public readonly gpioLegacyOffset: number;
 
@@ -52,6 +54,8 @@ export class Config {
 
     this.disableWelcomeSMS = process.env.DISABLE_WELCOME_SMS === "1";
     this.disableAlertSMS = process.env.DISABLE_ALERT_SMS === "1";
+    this.disableLED = process.env.DISABLE_LED === "1";
+    this.disableSound = process.env.DISABLE_SOUND === "1";
 
     this.smsCooldownPeriod = parseInt(
       process.env.SMS_COOLDOWN_PERIOD || "300000",
@@ -129,6 +133,14 @@ export class Config {
     return this.disableAlertSMS;
   }
 
+  public isLEDDisabled(): boolean {
+    return this.disableLED;
+  }
+
+  public isSoundDisabled(): boolean {
+    return this.disableSound;
+  }
+
   public getSmsCooldownPeriod(): number {
     return this.smsCooldownPeriod;
   }
@@ -163,6 +175,8 @@ export class Config {
       `Welcome SMS: ${this.disableWelcomeSMS ? "DISABLED" : "ENABLED"}`
     );
     console.log(`Alert SMS: ${this.disableAlertSMS ? "DISABLED" : "ENABLED"}`);
+    console.log(`LED: ${this.disableLED ? "DISABLED" : "ENABLED"}`);
+    console.log(`Sound: ${this.disableSound ? "DISABLED" : "ENABLED"}`);
     console.log(
       `SMS Cooldown Period: ${this.smsCooldownPeriod}ms (${
         this.smsCooldownPeriod / 60000
