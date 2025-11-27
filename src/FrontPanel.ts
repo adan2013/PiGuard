@@ -99,12 +99,12 @@ export class FrontPanel {
         this.led?.writeSync(1);
         break;
       case LedState.SlowFlash:
-        // Slow flash: 200ms on, 1800ms off (2 second cycle)
-        this.startLedFlash(200, 1800);
+        // Slow flash: 100ms on, 4900ms off (5 second cycle)
+        this.startLedFlash(100, 4900);
         break;
       case LedState.SlowBlink:
-        // Slow blink: 500ms on, 500ms off (1 second cycle)
-        this.startLedBlink(500);
+        // Slow blink: 1000ms on, 1000ms off (2 second cycle)
+        this.startLedBlink(1000);
         break;
       case LedState.FastBlink:
         // Fast blink: 200ms on, 200ms off (400ms cycle)

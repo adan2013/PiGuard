@@ -240,6 +240,7 @@ export class PiGuard {
     });
 
     await this.gsm.close();
+    await this.frontPanel.cleanup();
 
     console.log("[PiGuard] Shutdown complete");
     process.exit(0);
