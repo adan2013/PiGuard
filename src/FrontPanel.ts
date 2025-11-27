@@ -5,9 +5,9 @@ import { Config } from "./Config";
 
 export enum LedState {
   Off = "Off",
-  SlowFlash = "SlowFlash", // Slow flash pattern
-  SlowBlink = "SlowBlink", // Slow steady blink
-  FastBlink = "FastBlink", // Fast steady blink
+  SlowFlash = "SlowFlash",
+  SlowBlink = "SlowBlink",
+  FastBlink = "FastBlink",
   SolidOn = "SolidOn",
 }
 
@@ -54,7 +54,6 @@ export class FrontPanel {
       config.frontPanelGpioPins.switch1 + config.gpioLegacyOffset;
     this.switch2Pin =
       config.frontPanelGpioPins.switch2 + config.gpioLegacyOffset;
-    this.initialize();
   }
 
   public async initialize(): Promise<void> {
@@ -99,15 +98,12 @@ export class FrontPanel {
         this.led?.writeSync(1);
         break;
       case LedState.SlowFlash:
-        // Slow flash: 50ms on, 4950ms off (5 second cycle)
         this.startLedFlash(50, 4950);
         break;
       case LedState.SlowBlink:
-        // Slow blink: 1500ms on, 1500ms off (3 second cycle)
         this.startLedBlink(1500);
         break;
       case LedState.FastBlink:
-        // Fast blink: 200ms on, 200ms off (400ms cycle)
         this.startLedBlink(200);
         break;
     }

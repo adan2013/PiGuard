@@ -27,6 +27,7 @@ export class PiGuard {
 
     try {
       await this.gsm.initialize();
+      await this.frontPanel.initialize();
       await this.setupTriggers();
 
       this.isRunning = true;
