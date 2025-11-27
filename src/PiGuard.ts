@@ -218,7 +218,7 @@ export class PiGuard {
       return; // Alredy in SolidOn state
     }
     if (this.activeTriggers.size > 0) {
-      this.frontPanel.setLedState(LedState.SlowBlink);
+      this.frontPanel.setLedState(LedState.FastBlink);
     } else {
       this.frontPanel.setLedState(LedState.SlowFlash);
     }
