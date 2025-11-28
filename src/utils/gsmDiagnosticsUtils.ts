@@ -46,7 +46,11 @@ export function getMessageFormatDescription(mode: number): string {
  */
 export function parseCMGF(response: string): number | undefined {
   const match = response.match(/\+CMGF:\s*(\d+)/i);
-  return match ? parseInt(match[1], 10) : undefined;
+  if (match) {
+    const mode = parseInt(match[1], 10);
+    return isValidMessageFormat(mode) ? mode : undefined;
+  }
+  return undefined;
 }
 
 /**
@@ -65,6 +69,9 @@ export function getNetworkRegistrationModeDescription(n: number): string {
  * Converts network registration status to short description
  */
 export function getNetworkStatusDescription(stat: number): string {
+  if (!isValidNetworkStatus(stat)) {
+    return "INV";
+  }
   const statusMap: Record<number, string> = {
     0: "NO",
     1: "HOME",
@@ -86,10 +93,21 @@ export function parseCREG(
 ): { n?: number; stat?: number } | undefined {
   const match = response.match(/\+CREG:\s*(\d+),(\d+)/i);
   if (match) {
-    return {
-      n: parseInt(match[1], 10),
-      stat: parseInt(match[2], 10),
-    };
+    const n = parseInt(match[1], 10);
+    const stat = parseInt(match[2], 10);
+
+    const result: { n?: number; stat?: number } = {};
+
+    // n should be 0, 1, or 2
+    if (n >= 0 && n <= 2) {
+      result.n = n;
+    }
+
+    if (isValidNetworkStatus(stat)) {
+      result.stat = stat;
+    }
+
+    return Object.keys(result).length > 0 ? result : undefined;
   }
   return undefined;
 }
@@ -98,6 +116,9 @@ export function parseCREG(
  * Converts RSSI value to dBm
  */
 export function rssiToDbm(rssi: number): string {
+  if (!isValidRSSI(rssi)) {
+    return "Invalid RSSI";
+  }
   if (rssi === 99) return "Unknown or not detectable";
   if (rssi === 0) return "-113 dBm or less";
   if (rssi === 31) return "-51 dBm or greater";
@@ -109,6 +130,9 @@ export function rssiToDbm(rssi: number): string {
  * Converts RSSI to short signal strength description
  */
 export function getSignalStrengthDescription(rssi: number): string {
+  if (!isValidRSSI(rssi)) {
+    return "INV";
+  }
   if (rssi === 99) return "UNK";
   if (rssi >= 20) return "EXC";
   if (rssi >= 15) return "GOOD";
@@ -121,6 +145,9 @@ export function getSignalStrengthDescription(rssi: number): string {
  * Converts BER to signal quality description
  */
 export function getSignalQualityDescription(ber: number): string {
+  if (!isValidBER(ber)) {
+    return "Invalid BER";
+  }
   if (ber === 99) return "Unknown";
   const qualityMap: Record<number, string> = {
     0: "Excellent (< 0.2%)",
@@ -136,6 +163,41 @@ export function getSignalQualityDescription(ber: number): string {
 }
 
 /**
+ * Validates RSSI value (0-31 or 99)
+ */
+export function isValidRSSI(rssi: number): boolean {
+  return (rssi >= 0 && rssi <= 31) || rssi === 99;
+}
+
+/**
+ * Validates BER value (0-7 or 99)
+ */
+export function isValidBER(ber: number): boolean {
+  return (ber >= 0 && ber <= 7) || ber === 99;
+}
+
+/**
+ * Validates network registration status (0-5)
+ */
+export function isValidNetworkStatus(stat: number): boolean {
+  return stat >= 0 && stat <= 5;
+}
+
+/**
+ * Validates access technology (0-7)
+ */
+export function isValidAccessTechnology(act: number): boolean {
+  return act >= 0 && act <= 7;
+}
+
+/**
+ * Validates message format (0 or 1)
+ */
+export function isValidMessageFormat(mode: number): boolean {
+  return mode === 0 || mode === 1;
+}
+
+/**
  * Parses AT+CSQ response
  * Format: +CSQ: <rssi>,<ber>
  * Example: +CSQ: 20,0
@@ -145,10 +207,20 @@ export function parseCSQ(
 ): { rssi?: number; ber?: number } | undefined {
   const match = response.match(/\+CSQ:\s*(\d+),(\d+)/i);
   if (match) {
-    return {
-      rssi: parseInt(match[1], 10),
-      ber: parseInt(match[2], 10),
-    };
+    const rssi = parseInt(match[1], 10);
+    const ber = parseInt(match[2], 10);
+
+    const result: { rssi?: number; ber?: number } = {};
+
+    if (isValidRSSI(rssi)) {
+      result.rssi = rssi;
+    }
+
+    if (isValidBER(ber)) {
+      result.ber = ber;
+    }
+
+    return Object.keys(result).length > 0 ? result : undefined;
   }
   return undefined;
 }
@@ -167,6 +239,9 @@ export function parseCSCA(response: string): string | undefined {
  * Converts Access Technology (AcT) to short description
  */
 export function getAccessTechnologyDescription(act: number): string {
+  if (!isValidAccessTechnology(act)) {
+    return "INV";
+  }
   const actMap: Record<number, string> = {
     0: "2G",
     1: "2G",
@@ -191,10 +266,14 @@ export function parseCOPS(
   // Try with operator name in quotes and AcT
   const match = response.match(/\+COPS:\s*\d+,\d+,"([^"]+)",(\d+)/i);
   if (match) {
-    return {
+    const act = parseInt(match[2], 10);
+    const result: { operator?: string; act?: number } = {
       operator: match[1].trim(),
-      act: parseInt(match[2], 10),
     };
+    if (isValidAccessTechnology(act)) {
+      result.act = act;
+    }
+    return result;
   }
   // Try with operator name in quotes without AcT
   const match2 = response.match(/\+COPS:\s*\d+,\d+,"([^"]+)"/i);
@@ -206,10 +285,16 @@ export function parseCOPS(
   // Try without quotes (numeric operator)
   const match3 = response.match(/\+COPS:\s*\d+,\d+,(\d+)(?:,(\d+))?/i);
   if (match3) {
-    return {
+    const result: { operator?: string; act?: number } = {
       operator: match3[1].trim(),
-      act: match3[2] ? parseInt(match3[2], 10) : undefined,
     };
+    if (match3[2]) {
+      const act = parseInt(match3[2], 10);
+      if (isValidAccessTechnology(act)) {
+        result.act = act;
+      }
+    }
+    return result;
   }
   return undefined;
 }
