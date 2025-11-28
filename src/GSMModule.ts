@@ -59,6 +59,11 @@ export class GSMModule {
           expectedResponse: "+CSCA:",
           log: "Checking SC Address...",
         },
+        {
+          command: "AT+COPS?",
+          expectedResponse: "+COPS:",
+          log: "Checking current operator...",
+        },
       ];
 
       for (const test of tests) {

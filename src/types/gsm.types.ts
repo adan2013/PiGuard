@@ -33,6 +33,7 @@ export interface GSMDiagnostics {
     ber?: number;
   };
   serviceCenterAddress?: string;
+  currentOperator?: string;
   lastUpdated?: Date;
   // Human-readable descriptions
   pinStatusDescription?: string;
@@ -41,5 +42,5 @@ export interface GSMDiagnostics {
   networkStatusDescription?: string;
   signalStrengthDescription?: string;
   signalQualityDescription?: string;
-  rssiValue?: string; // e.g., "-85 dBm"
+  rssiValue?: string;
 }

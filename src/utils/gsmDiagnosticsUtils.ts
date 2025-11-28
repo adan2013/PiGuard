@@ -164,6 +164,24 @@ export function parseCSCA(response: string): string | undefined {
 }
 
 /**
+ * Parses AT+COPS? response
+ * Format: +COPS: <mode>[,<format>[,<oper>]]
+ * Example: +COPS: 0,0,"T-Mobile"
+ */
+export function parseCOPS(response: string): string | undefined {
+  const match = response.match(/\+COPS:\s*\d+,\d+,"([^"]+)"/i);
+  if (match) {
+    return match[1].trim();
+  }
+  // Try without quotes
+  const match2 = response.match(/\+COPS:\s*\d+,\d+,(\d+)/i);
+  if (match2) {
+    return match2[1].trim();
+  }
+  return undefined;
+}
+
+/**
  * Extracts diagnostic data from AT command response
  */
 export function extractDiagnosticsFromResponse(
@@ -218,6 +236,9 @@ export function extractDiagnosticsFromResponse(
   } else if (command.includes("+CSCA?")) {
     const sca = parseCSCA(response);
     if (sca) diagnostics.serviceCenterAddress = sca;
+  } else if (command.includes("+COPS?")) {
+    const operator = parseCOPS(response);
+    if (operator) diagnostics.currentOperator = operator;
   }
 
   return diagnostics;
@@ -252,6 +273,11 @@ export function getDetailedStatusReport(diagnostics: GSMDiagnostics): string {
     }
   } else if (diag.networkRegistration) {
     lines.push("Network Status: Unknown");
+  }
+
+  // Current Operator
+  if (diag.currentOperator) {
+    lines.push(`Current Operator: ${diag.currentOperator}`);
   }
 
   // Signal Quality
@@ -315,6 +341,11 @@ export function getCompactStatusReport(
   // Network Status
   if (diag.networkStatusDescription) {
     parts.push(`Network: ${diag.networkStatusDescription}`);
+  }
+
+  // Current Operator
+  if (diag.currentOperator) {
+    parts.push(`Operator: ${diag.currentOperator}`);
   }
 
   // Signal Strength
