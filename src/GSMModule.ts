@@ -246,7 +246,7 @@ export class GSMModule {
     });
   }
 
-  public async sendSMS(
+  private async sendSMS(
     phoneNumber: string,
     message: string,
     performConnectionTest: boolean = true
@@ -349,7 +349,7 @@ export class GSMModule {
     return getDetailedStatusReport(this.diagnostics);
   }
 
-  public getCompactStatusReport(sensorStates: boolean[] = []): string {
-    return getCompactStatusReport(this.diagnostics, sensorStates);
+  public getCompactStatusReport(): string {
+    return getCompactStatusReport(this.diagnostics);
   }
 }

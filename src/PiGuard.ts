@@ -218,11 +218,7 @@ export class PiGuard {
     this.frontPanel.onSwitch2ShortPress(async () => {
       this.frontPanel.playDoubleBeep();
       await this.gsm.performConnectionTest();
-      const sensorStates: boolean[] = Object.entries(this.triggers)
-        .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
-        .map(([key]) => this.activeTriggers.has(key));
-      const statusReport = this.gsm.getCompactStatusReport(sensorStates);
-      this.gsm.sendToAll(statusReport);
+      await this.gsm.sendToAll(this.gsm.getCompactStatusReport());
     });
     this.frontPanel.onSwitch2LongPress(async () => {
       await this.frontPanel.playMelodyDown();
@@ -251,8 +247,7 @@ export class PiGuard {
     }
 
     try {
-      const message = `PiGuard active! ${this.gsm.getCompactStatusReport()}`;
-      await this.gsm.sendToAll(message);
+      await this.gsm.sendToAll(this.gsm.getCompactStatusReport());
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);

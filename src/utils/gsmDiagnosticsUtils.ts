@@ -358,20 +358,9 @@ export function getDetailedStatusReport(diagnostics: GSMDiagnostics): string {
   return lines.join("\n");
 }
 
-export function getCompactStatusReport(
-  diagnostics: GSMDiagnostics,
-  sensorStates: boolean[] = []
-): string {
+export function getCompactStatusReport(diagnostics: GSMDiagnostics): string {
   const diag = diagnostics;
   const parts: string[] = [];
-
-  // Sensor States (binary format: 0 = inactive, 1 = active)
-  if (sensorStates.length > 0) {
-    const binaryPattern = sensorStates
-      .map((active) => (active ? "1" : "0"))
-      .join("");
-    parts.push(`IN:${binaryPattern}`);
-  }
 
   // PIN Status
   if (diag.pinStatusDescription) {
@@ -391,7 +380,7 @@ export function getCompactStatusReport(
         : diag.currentOperator;
     let operatorPart = `OP:${opShort}`;
     if (diag.accessTechnologyDescription) {
-      operatorPart += diag.accessTechnologyDescription;
+      operatorPart += ` (${diag.accessTechnologyDescription})`;
     }
     parts.push(operatorPart);
   }
