@@ -34,6 +34,8 @@ export interface GSMDiagnostics {
   };
   serviceCenterAddress?: string;
   currentOperator?: string;
+  accessTechnology?: number;
+  accessTechnologyDescription?: string;
   lastUpdated?: Date;
   // Human-readable descriptions
   pinStatusDescription?: string;

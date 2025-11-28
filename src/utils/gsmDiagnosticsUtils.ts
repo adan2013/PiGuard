@@ -164,19 +164,52 @@ export function parseCSCA(response: string): string | undefined {
 }
 
 /**
- * Parses AT+COPS? response
- * Format: +COPS: <mode>[,<format>[,<oper>]]
- * Example: +COPS: 0,0,"T-Mobile"
+ * Converts Access Technology (AcT) to short description
  */
-export function parseCOPS(response: string): string | undefined {
-  const match = response.match(/\+COPS:\s*\d+,\d+,"([^"]+)"/i);
+export function getAccessTechnologyDescription(act: number): string {
+  const actMap: Record<number, string> = {
+    0: "2G",
+    1: "2G",
+    2: "3G",
+    3: "2G",
+    4: "3.5G",
+    5: "3.5G",
+    6: "3.5G",
+    7: "4G",
+  };
+  return actMap[act] || `${act}`;
+}
+
+/**
+ * Parses AT+COPS? response
+ * Format: +COPS: <mode>[,<format>[,<oper>[,<act>]]]
+ * Example: +COPS: 0,0,"T-Mobile",7
+ */
+export function parseCOPS(
+  response: string
+): { operator?: string; act?: number } | undefined {
+  // Try with operator name in quotes and AcT
+  const match = response.match(/\+COPS:\s*\d+,\d+,"([^"]+)",(\d+)/i);
   if (match) {
-    return match[1].trim();
+    return {
+      operator: match[1].trim(),
+      act: parseInt(match[2], 10),
+    };
   }
-  // Try without quotes
-  const match2 = response.match(/\+COPS:\s*\d+,\d+,(\d+)/i);
+  // Try with operator name in quotes without AcT
+  const match2 = response.match(/\+COPS:\s*\d+,\d+,"([^"]+)"/i);
   if (match2) {
-    return match2[1].trim();
+    return {
+      operator: match2[1].trim(),
+    };
+  }
+  // Try without quotes (numeric operator)
+  const match3 = response.match(/\+COPS:\s*\d+,\d+,(\d+)(?:,(\d+))?/i);
+  if (match3) {
+    return {
+      operator: match3[1].trim(),
+      act: match3[2] ? parseInt(match3[2], 10) : undefined,
+    };
   }
   return undefined;
 }
@@ -237,8 +270,17 @@ export function extractDiagnosticsFromResponse(
     const sca = parseCSCA(response);
     if (sca) diagnostics.serviceCenterAddress = sca;
   } else if (command.includes("+COPS?")) {
-    const operator = parseCOPS(response);
-    if (operator) diagnostics.currentOperator = operator;
+    const copsData = parseCOPS(response);
+    if (copsData) {
+      if (copsData.operator) {
+        diagnostics.currentOperator = copsData.operator;
+      }
+      if (copsData.act !== undefined) {
+        diagnostics.accessTechnology = copsData.act;
+        diagnostics.accessTechnologyDescription =
+          getAccessTechnologyDescription(copsData.act);
+      }
+    }
   }
 
   return diagnostics;
@@ -277,7 +319,11 @@ export function getDetailedStatusReport(diagnostics: GSMDiagnostics): string {
 
   // Current Operator
   if (diag.currentOperator) {
-    lines.push(`Current Operator: ${diag.currentOperator}`);
+    let operatorLine = `Current Operator: ${diag.currentOperator}`;
+    if (diag.accessTechnologyDescription) {
+      operatorLine += ` (${diag.accessTechnologyDescription})`;
+    }
+    lines.push(operatorLine);
   }
 
   // Signal Quality
@@ -345,7 +391,11 @@ export function getCompactStatusReport(
 
   // Current Operator
   if (diag.currentOperator) {
-    parts.push(`Operator: ${diag.currentOperator}`);
+    let operatorPart = `Operator: ${diag.currentOperator}`;
+    if (diag.accessTechnologyDescription) {
+      operatorPart += ` (${diag.accessTechnologyDescription})`;
+    }
+    parts.push(operatorPart);
   }
 
   // Signal Strength
