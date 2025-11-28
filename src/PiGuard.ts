@@ -251,21 +251,8 @@ export class PiGuard {
     }
 
     try {
-      const phoneNumbers = this.config.phoneNumbers;
-      if (phoneNumbers.length === 0) return;
-
-      const message = `PiGuard surveillance system is now active at ${new Date().toLocaleString()}`;
-
-      for (const phoneNumber of phoneNumbers) {
-        try {
-          await this.gsm.sendSMS(phoneNumber, message);
-          console.log(`[PiGuard] Startup notification sent to ${phoneNumber}`);
-        } catch (error) {
-          console.error(
-            `[PiGuard] Failed to send startup notification to ${phoneNumber}`
-          );
-        }
-      }
+      const message = `PiGuard active! ${this.gsm.getCompactStatusReport()}`;
+      await this.gsm.sendToAll(message);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
