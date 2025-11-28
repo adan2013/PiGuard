@@ -75,7 +75,6 @@ export class GSMModule {
       }
 
       this.diagnostics.lastUpdated = new Date();
-      console.log(JSON.stringify(this.diagnostics, null, 2));
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -118,6 +117,7 @@ export class GSMModule {
       await this.sendCommand("AT+CNMI=1,2,0,0,0", "OK");
       await this.sendCommand(`AT+CSCS="GSM"`, "OK");
       await this.performConnectionTest();
+      console.log(this.getDetailedStatusReport());
 
       this.isReady = true;
       console.log("[GSM] GSM module initialized successfully");
