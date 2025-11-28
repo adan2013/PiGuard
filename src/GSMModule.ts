@@ -350,10 +350,6 @@ export class GSMModule {
   }
 
   public getCompactStatusReport(sensorStates: boolean[] = []): string {
-    return getCompactStatusReport(
-      this.diagnostics,
-      this.config.phoneNumbers,
-      sensorStates
-    );
+    return getCompactStatusReport(this.diagnostics, sensorStates);
   }
 }

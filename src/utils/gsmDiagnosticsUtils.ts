@@ -1,21 +1,21 @@
 import { GSMDiagnostics } from "../types";
 
 /**
- * Converts PIN status to human-readable description
+ * Converts PIN status to short description
  */
 export function getPinStatusDescription(pinStatus: string): string {
   const statusMap: Record<string, string> = {
-    READY: "SIM card ready",
-    "SIM PIN": "SIM PIN required",
-    "SIM PUK": "SIM PUK required (PIN locked)",
-    "SIM PIN2": "SIM PIN2 required",
-    "SIM PUK2": "SIM PUK2 required",
-    PH_SIM_PIN: "Phone-to-SIM card password required",
-    PH_SIM_PUK: "Phone-to-SIM card unblocking password required",
-    SIM_PIN: "SIM PIN required",
-    SIM_PUK: "SIM PUK required",
+    READY: "OK",
+    "SIM PIN": "PIN",
+    "SIM PUK": "PUK",
+    "SIM PIN2": "PIN2",
+    "SIM PUK2": "PUK2",
+    PH_SIM_PIN: "PIN",
+    PH_SIM_PUK: "PUK",
+    SIM_PIN: "PIN",
+    SIM_PUK: "PUK",
   };
-  return statusMap[pinStatus] || pinStatus;
+  return statusMap[pinStatus] || "?";
 }
 
 /**
@@ -62,18 +62,18 @@ export function getNetworkRegistrationModeDescription(n: number): string {
 }
 
 /**
- * Converts network registration status to human-readable description
+ * Converts network registration status to short description
  */
 export function getNetworkStatusDescription(stat: number): string {
   const statusMap: Record<number, string> = {
-    0: "Not registered, not searching",
-    1: "Registered (home network)",
-    2: "Not registered, searching",
-    3: "Registration denied",
-    4: "Unknown",
-    5: "Registered (roaming)",
+    0: "NO",
+    1: "HOME",
+    2: "SEARCH",
+    3: "DENIED",
+    4: "UNK",
+    5: "ROAM",
   };
-  return statusMap[stat] || `Unknown status (${stat})`;
+  return statusMap[stat] || "?";
 }
 
 /**
@@ -106,15 +106,15 @@ export function rssiToDbm(rssi: number): string {
 }
 
 /**
- * Converts RSSI to signal strength description
+ * Converts RSSI to short signal strength description
  */
 export function getSignalStrengthDescription(rssi: number): string {
-  if (rssi === 99) return "Unknown";
-  if (rssi >= 20) return "Excellent";
-  if (rssi >= 15) return "Good";
-  if (rssi >= 10) return "Fair";
-  if (rssi >= 5) return "Poor";
-  return "Very Poor";
+  if (rssi === 99) return "UNK";
+  if (rssi >= 20) return "EXC";
+  if (rssi >= 15) return "GOOD";
+  if (rssi >= 10) return "FAIR";
+  if (rssi >= 5) return "POOR";
+  return "VPOOR";
 }
 
 /**
@@ -360,57 +360,49 @@ export function getDetailedStatusReport(diagnostics: GSMDiagnostics): string {
 
 export function getCompactStatusReport(
   diagnostics: GSMDiagnostics,
-  phoneNumbers: string[] = [],
   sensorStates: boolean[] = []
 ): string {
   const diag = diagnostics;
   const parts: string[] = [];
-
-  // Phone Numbers
-  if (phoneNumbers.length > 0) {
-    parts.push(`Phones: ${phoneNumbers.join(", ")}`);
-  }
 
   // Sensor States (binary format: 0 = inactive, 1 = active)
   if (sensorStates.length > 0) {
     const binaryPattern = sensorStates
       .map((active) => (active ? "1" : "0"))
       .join("");
-    parts.push(`Inputs: ${binaryPattern}`);
+    parts.push(`IN:${binaryPattern}`);
   }
 
   // PIN Status
   if (diag.pinStatusDescription) {
-    parts.push(`SIM: ${diag.pinStatusDescription}`);
+    parts.push(`SIM:${diag.pinStatusDescription}`);
   }
 
   // Network Status
   if (diag.networkStatusDescription) {
-    parts.push(`Network: ${diag.networkStatusDescription}`);
+    parts.push(`NET:${diag.networkStatusDescription}`);
   }
 
-  // Current Operator
+  // Current Operator (shortened)
   if (diag.currentOperator) {
-    let operatorPart = `Operator: ${diag.currentOperator}`;
+    const opShort =
+      diag.currentOperator.length > 8
+        ? diag.currentOperator.substring(0, 8)
+        : diag.currentOperator;
+    let operatorPart = `OP:${opShort}`;
     if (diag.accessTechnologyDescription) {
-      operatorPart += ` (${diag.accessTechnologyDescription})`;
+      operatorPart += diag.accessTechnologyDescription;
     }
     parts.push(operatorPart);
   }
 
   // Signal Strength
   if (diag.signalStrengthDescription) {
-    const signalText = diag.signalStrengthDescription;
-    let signalPart = `Signal: ${signalText}`;
+    let signalPart = `SIG:${diag.signalStrengthDescription}`;
     if (diag.rssiValue) {
       signalPart += ` (${diag.rssiValue})`;
     }
     parts.push(signalPart);
-  }
-
-  // BER (Bit Error Rate)
-  if (diag.signalQualityDescription) {
-    parts.push(`BER: ${diag.signalQualityDescription}`);
   }
 
   return parts.join("; ");
