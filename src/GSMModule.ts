@@ -2,9 +2,10 @@ import { SerialPort } from "serialport";
 import { ReadlineParser } from "@serialport/parser-readline";
 import { ATCommandQueue } from "./ATCommandQueue";
 import { Config } from "./Config";
-import { PendingCommand, SMSResult, GSMStatus } from "./types";
+import { PendingCommand, SMSResult, GSMStatus, GSMDiagnostics } from "./types";
+import { extractDiagnosticsFromResponse } from "./utils/gsmDiagnosticsUtils";
 
-export { SMSResult, GSMStatus };
+export { SMSResult, GSMStatus, GSMDiagnostics };
 
 export class GSMModule {
   private config: Config;
@@ -14,6 +15,7 @@ export class GSMModule {
   private commandQueue: ATCommandQueue;
   private isReady: boolean = false;
   private pendingCommand: PendingCommand | null = null;
+  private diagnostics: GSMDiagnostics = {};
 
   constructor(config: Config) {
     this.config = config;
@@ -27,16 +29,49 @@ export class GSMModule {
 
   public async performConnectionTest() {
     try {
-      console.log("[GSM] Checking PIN...");
-      await this.sendCommand("AT+CPIN?", "+CPIN:");
-      console.log("[GSM] Checking mode...");
-      await this.sendCommand("AT+CMGF?", "+CMGF:");
-      console.log("[GSM] Checking network registration...");
-      await this.sendCommand("AT+CREG?", "+CREG:");
-      console.log("[GSM] Checking signal quality...");
-      await this.sendCommand("AT+CSQ", "+CSQ:");
-      console.log("[GSM] Checking SC Address...");
-      await this.sendCommand("AT+CSCA?", "+CSCA:");
+      const tests = [
+        {
+          command: "AT+CPIN?",
+          expectedResponse: "+CPIN:",
+          log: "Checking PIN...",
+        },
+        {
+          command: "AT+CMGF?",
+          expectedResponse: "+CMGF:",
+          log: "Checking mode...",
+        },
+        {
+          command: "AT+CREG?",
+          expectedResponse: "+CREG:",
+          log: "Checking network registration...",
+        },
+        {
+          command: "AT+CSQ",
+          expectedResponse: "+CSQ:",
+          log: "Checking signal quality...",
+        },
+        {
+          command: "AT+CSCA?",
+          expectedResponse: "+CSCA:",
+          log: "Checking SC Address...",
+        },
+      ];
+
+      for (const test of tests) {
+        console.log(`[GSM] ${test.log}`);
+        const response = await this.sendCommand(
+          test.command,
+          test.expectedResponse
+        );
+        const diagnostics = extractDiagnosticsFromResponse(
+          test.command,
+          response
+        );
+        Object.assign(this.diagnostics, diagnostics);
+      }
+
+      this.diagnostics.lastUpdated = new Date();
+      console.log(JSON.stringify(this.diagnostics, null, 2));
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -202,7 +237,11 @@ export class GSMModule {
     });
   }
 
-  public async sendSMS(phoneNumber: string, message: string): Promise<boolean> {
+  public async sendSMS(
+    phoneNumber: string,
+    message: string,
+    performConnectionTest: boolean = true
+  ): Promise<boolean> {
     if (!this.isReady) {
       throw new Error("GSM module not ready");
     }
@@ -210,7 +249,9 @@ export class GSMModule {
     console.log(`[GSM] Sending SMS to ${phoneNumber}: ${message}`);
 
     try {
-      await this.performConnectionTest();
+      if (performConnectionTest) {
+        await this.performConnectionTest();
+      }
       console.log("[GSM] Sending SMS...");
       await this.sendCommand(`AT+CMGS="${phoneNumber}"`, null);
 
@@ -250,7 +291,7 @@ export class GSMModule {
 
     for (const phoneNumber of phoneNumbers) {
       try {
-        await this.sendSMS(phoneNumber, message);
+        await this.sendSMS(phoneNumber, message, false);
         results.push({ phoneNumber, success: true });
       } catch (error) {
         const errorMessage =
@@ -296,5 +337,9 @@ export class GSMModule {
       portOpen: this.port ? this.port.isOpen : false,
       queueStatus: this.commandQueue.getStatus(),
     };
+  }
+
+  public getDiagnostics(): GSMDiagnostics {
+    return { ...this.diagnostics };
   }
 }

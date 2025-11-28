@@ -19,3 +19,18 @@ export interface GSMStatus {
   portOpen: boolean;
   queueStatus: QueueStatus;
 }
+
+export interface GSMDiagnostics {
+  pinStatus?: string;
+  messageFormat?: number;
+  networkRegistration?: {
+    n?: number;
+    stat?: number;
+  };
+  signalQuality?: {
+    rssi?: number;
+    ber?: number;
+  };
+  serviceCenterAddress?: string;
+  lastUpdated?: Date;
+}
