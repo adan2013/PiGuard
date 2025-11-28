@@ -33,7 +33,7 @@ export function parseCPIN(response: string): string | undefined {
  */
 export function getMessageFormatDescription(mode: number): string {
   return mode === 0
-    ? "PDU mode (binary)"
+    ? "PDU mode"
     : mode === 1
     ? "Text mode"
     : `Unknown mode (${mode})`;
@@ -309,30 +309,12 @@ export function getCompactStatusReport(
 
   // PIN Status
   if (diag.pinStatusDescription) {
-    const pinStatus = diag.pinStatusDescription.includes("ready")
-      ? "Ready"
-      : diag.pinStatusDescription.includes("PIN")
-      ? "PIN Required"
-      : diag.pinStatusDescription.includes("PUK")
-      ? "PUK Required"
-      : "Unknown";
-    parts.push(`SIM: ${pinStatus}`);
+    parts.push(`SIM: ${diag.pinStatusDescription}`);
   }
 
   // Network Status
   if (diag.networkStatusDescription) {
-    let networkStatus = "";
-    if (diag.networkStatusDescription.includes("Registered")) {
-      const isRoaming = diag.networkStatusDescription.includes("roaming");
-      networkStatus = isRoaming ? "Roaming" : "Home Network";
-    } else if (diag.networkStatusDescription.includes("searching")) {
-      networkStatus = "Searching";
-    } else if (diag.networkStatusDescription.includes("denied")) {
-      networkStatus = "Registration Denied";
-    } else {
-      networkStatus = "Not Registered";
-    }
-    parts.push(`Network: ${networkStatus}`);
+    parts.push(`Network: ${diag.networkStatusDescription}`);
   }
 
   // Signal Strength
@@ -347,10 +329,7 @@ export function getCompactStatusReport(
 
   // Message Format
   if (diag.messageFormatDescription) {
-    const modeText = diag.messageFormatDescription.includes("Text")
-      ? "TXT"
-      : "PDU";
-    parts.push(`Format: ${modeText}`);
+    parts.push(`Format: ${diag.messageFormatDescription}`);
   }
 
   return parts.join("; ");
