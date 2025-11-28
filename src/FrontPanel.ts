@@ -64,7 +64,7 @@ export class FrontPanel {
         debounceTimeout: 500,
       });
       this.switch2 = new Gpio(this.switch2Pin, "in", "both", {
-        debounceTimeout: 500,
+        debounceTimeout: 250,
       });
 
       this.setupSwitch1Watcher();

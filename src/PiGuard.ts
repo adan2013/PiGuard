@@ -2,6 +2,7 @@ import { Config } from "./Config";
 import { FrontPanel, LedState } from "./FrontPanel";
 import { GSMModule } from "./GSMModule";
 import { TriggerInfo, SystemStatus, SMSResult, GpioPins } from "./types";
+import { shutdownRaspberryPi } from "./utils/shutdownUtils";
 
 export class PiGuard {
   private config: Config;
@@ -207,9 +208,10 @@ export class PiGuard {
       this.frontPanel.playDoubleBeep();
       // TODO: Add functionality here
     });
-    this.frontPanel.onSwitch2LongPress(() => {
-      this.frontPanel.playMelodyDown();
-      // TODO: Add functionality here
+    this.frontPanel.onSwitch2LongPress(async () => {
+      await this.frontPanel.playMelodyDown();
+      await this.cleanup();
+      shutdownRaspberryPi();
     });
   }
 
@@ -258,8 +260,8 @@ export class PiGuard {
     }
   }
 
-  public async shutdown(): Promise<void> {
-    console.log("\n[PiGuard] Shutting down...");
+  private async cleanup(): Promise<void> {
+    console.log("\n[PiGuard] Cleaning up resources...");
 
     this.isRunning = false;
 
@@ -280,7 +282,11 @@ export class PiGuard {
     await this.gsm.close();
     await this.frontPanel.cleanup();
 
-    console.log("[PiGuard] Shutdown complete");
+    console.log("[PiGuard] Cleanup complete");
+  }
+
+  public async shutdown(): Promise<void> {
+    await this.cleanup();
     process.exit(0);
   }
 
