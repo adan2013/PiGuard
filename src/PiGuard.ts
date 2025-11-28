@@ -30,6 +30,15 @@ export class PiGuard {
     try {
       await this.gsm.initialize();
       await this.frontPanel.initialize();
+
+      if (this.frontPanel.isSwitch1Pressed()) {
+        console.log(
+          "[PiGuard] Switch 1 is pressed on startup - disabling SMS alerts"
+        );
+        this.alertsDisabled = true;
+        this.frontPanel.setLedState(LedState.SolidOn);
+      }
+
       await this.setupTriggers();
       this.setupFrontPanelHandlers();
 
