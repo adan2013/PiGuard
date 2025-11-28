@@ -3,7 +3,11 @@ import { ReadlineParser } from "@serialport/parser-readline";
 import { ATCommandQueue } from "./ATCommandQueue";
 import { Config } from "./Config";
 import { PendingCommand, SMSResult, GSMStatus, GSMDiagnostics } from "./types";
-import { extractDiagnosticsFromResponse } from "./utils/gsmDiagnosticsUtils";
+import {
+  extractDiagnosticsFromResponse,
+  getDetailedStatusReport,
+  getCompactStatusReport,
+} from "./utils/gsmDiagnosticsUtils";
 
 export { SMSResult, GSMStatus, GSMDiagnostics };
 
@@ -275,18 +279,14 @@ export class GSMModule {
     }
   }
 
-  public async sendAlert(triggerName: string): Promise<SMSResult[]> {
+  public async sendToAll(message: string): Promise<SMSResult[]> {
     const phoneNumbers = this.config.phoneNumbers;
 
     if (phoneNumbers.length === 0) {
       return [];
     }
 
-    const timestamp = new Date().toLocaleString();
-    const message = `ALERT: ${triggerName} triggered at ${timestamp}`;
-
-    console.log(`[GSM] Sending alert: ${message}`);
-
+    console.log(`[GSM] Sending to all: ${message}`);
     const results: SMSResult[] = [];
 
     for (const phoneNumber of phoneNumbers) {
@@ -296,10 +296,7 @@ export class GSMModule {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        console.error(
-          `[GSM] Failed to send alert to ${phoneNumber}:`,
-          errorMessage
-        );
+        console.error(`[GSM] Failed to send to ${phoneNumber}:`, errorMessage);
         results.push({ phoneNumber, success: false, error: errorMessage });
       }
     }
@@ -341,5 +338,13 @@ export class GSMModule {
 
   public getDiagnostics(): GSMDiagnostics {
     return { ...this.diagnostics };
+  }
+
+  public getDetailedStatusReport(): string {
+    return getDetailedStatusReport(this.diagnostics);
+  }
+
+  public getCompactStatusReport(): string {
+    return getCompactStatusReport(this.diagnostics, this.config.phoneNumbers);
   }
 }

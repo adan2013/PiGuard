@@ -172,7 +172,9 @@ export class PiGuard {
     }
 
     try {
-      const results: SMSResult[] = await this.gsm.sendAlert(triggerName);
+      const results: SMSResult[] = await this.gsm.sendToAll(
+        `ALERT: ${triggerName}`
+      );
 
       results.forEach((result) => {
         if (!result.success) {
@@ -213,9 +215,11 @@ export class PiGuard {
       this.frontPanel.playSingleBeep();
       this.updateLedState();
     });
-    this.frontPanel.onSwitch2ShortPress(() => {
+    this.frontPanel.onSwitch2ShortPress(async () => {
       this.frontPanel.playDoubleBeep();
-      // TODO: Add functionality here
+      await this.gsm.performConnectionTest();
+      console.log(this.gsm.getCompactStatusReport());
+      this.gsm.sendToAll(this.gsm.getCompactStatusReport());
     });
     this.frontPanel.onSwitch2LongPress(async () => {
       await this.frontPanel.playMelodyDown();

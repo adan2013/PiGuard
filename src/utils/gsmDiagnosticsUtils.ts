@@ -222,3 +222,127 @@ export function extractDiagnosticsFromResponse(
 
   return diagnostics;
 }
+
+export function getDetailedStatusReport(diagnostics: GSMDiagnostics): string {
+  const diag = diagnostics;
+  const lines: string[] = [];
+
+  lines.push("=== GSM Module Diagnostic Report ===");
+  lines.push("");
+
+  // PIN Status
+  if (diag.pinStatusDescription) {
+    lines.push(`PIN Status: ${diag.pinStatusDescription}`);
+  } else if (diag.pinStatus) {
+    lines.push(`PIN Status: ${diag.pinStatus}`);
+  }
+
+  // Message Format
+  if (diag.messageFormatDescription) {
+    lines.push(`Message Format: ${diag.messageFormatDescription}`);
+  } else if (diag.messageFormat !== undefined) {
+    lines.push(`Message Format: Mode ${diag.messageFormat}`);
+  }
+
+  // Network Registration
+  if (diag.networkStatusDescription) {
+    lines.push(`Network Status: ${diag.networkStatusDescription}`);
+    if (diag.networkRegistrationDescription) {
+      lines.push(`  ${diag.networkRegistrationDescription}`);
+    }
+  } else if (diag.networkRegistration) {
+    lines.push("Network Status: Unknown");
+  }
+
+  // Signal Quality
+  if (diag.signalStrengthDescription || diag.signalQualityDescription) {
+    lines.push("Signal Quality:");
+    if (diag.rssiValue) {
+      lines.push(
+        `  Signal Strength: ${diag.signalStrengthDescription} (${diag.rssiValue})`
+      );
+    } else if (diag.signalStrengthDescription) {
+      lines.push(`  Signal Strength: ${diag.signalStrengthDescription}`);
+    }
+    if (diag.signalQualityDescription) {
+      lines.push(`  Bit Error Rate: ${diag.signalQualityDescription}`);
+    }
+  } else if (diag.signalQuality) {
+    lines.push("Signal Quality: Unknown");
+  }
+
+  // Service Center Address
+  if (diag.serviceCenterAddress) {
+    lines.push(`Service Center Address: ${diag.serviceCenterAddress}`);
+  }
+
+  // Last Updated
+  if (diag.lastUpdated) {
+    lines.push(`Last Updated: ${diag.lastUpdated.toLocaleString()}`);
+  }
+
+  lines.push("=====================================");
+
+  return lines.join("\n");
+}
+
+export function getCompactStatusReport(
+  diagnostics: GSMDiagnostics,
+  phoneNumbers: string[] = []
+): string {
+  const diag = diagnostics;
+  const parts: string[] = [];
+
+  // Phone Numbers
+  if (phoneNumbers.length > 0) {
+    parts.push(`Phones: ${phoneNumbers.join(", ")}`);
+  }
+
+  // PIN Status
+  if (diag.pinStatusDescription) {
+    const pinStatus = diag.pinStatusDescription.includes("ready")
+      ? "Ready"
+      : diag.pinStatusDescription.includes("PIN")
+      ? "PIN Required"
+      : diag.pinStatusDescription.includes("PUK")
+      ? "PUK Required"
+      : "Unknown";
+    parts.push(`SIM: ${pinStatus}`);
+  }
+
+  // Network Status
+  if (diag.networkStatusDescription) {
+    let networkStatus = "";
+    if (diag.networkStatusDescription.includes("Registered")) {
+      const isRoaming = diag.networkStatusDescription.includes("roaming");
+      networkStatus = isRoaming ? "Roaming" : "Home Network";
+    } else if (diag.networkStatusDescription.includes("searching")) {
+      networkStatus = "Searching";
+    } else if (diag.networkStatusDescription.includes("denied")) {
+      networkStatus = "Registration Denied";
+    } else {
+      networkStatus = "Not Registered";
+    }
+    parts.push(`Network: ${networkStatus}`);
+  }
+
+  // Signal Strength
+  if (diag.signalStrengthDescription) {
+    const signalText = diag.signalStrengthDescription;
+    let signalPart = `Signal: ${signalText}`;
+    if (diag.rssiValue) {
+      signalPart += ` (${diag.rssiValue})`;
+    }
+    parts.push(signalPart);
+  }
+
+  // Message Format
+  if (diag.messageFormatDescription) {
+    const modeText = diag.messageFormatDescription.includes("Text")
+      ? "TXT"
+      : "PDU";
+    parts.push(`Format: ${modeText}`);
+  }
+
+  return parts.join(" | ");
+}
