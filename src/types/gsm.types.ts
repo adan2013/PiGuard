@@ -21,6 +21,7 @@ export interface GSMStatus {
 }
 
 export interface GSMDiagnostics {
+  // Raw values
   pinStatus?: string;
   messageFormat?: number;
   networkRegistration?: {
@@ -33,4 +34,12 @@ export interface GSMDiagnostics {
   };
   serviceCenterAddress?: string;
   lastUpdated?: Date;
+  // Human-readable descriptions
+  pinStatusDescription?: string;
+  messageFormatDescription?: string;
+  networkRegistrationDescription?: string;
+  networkStatusDescription?: string;
+  signalStrengthDescription?: string;
+  signalQualityDescription?: string;
+  rssiValue?: string; // e.g., "-85 dBm"
 }

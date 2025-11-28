@@ -1,6 +1,24 @@
 import { GSMDiagnostics } from "../types";
 
 /**
+ * Converts PIN status to human-readable description
+ */
+export function getPinStatusDescription(pinStatus: string): string {
+  const statusMap: Record<string, string> = {
+    READY: "SIM card ready",
+    "SIM PIN": "SIM PIN required",
+    "SIM PUK": "SIM PUK required (PIN locked)",
+    "SIM PIN2": "SIM PIN2 required",
+    "SIM PUK2": "SIM PUK2 required",
+    PH_SIM_PIN: "Phone-to-SIM card password required",
+    PH_SIM_PUK: "Phone-to-SIM card unblocking password required",
+    SIM_PIN: "SIM PIN required",
+    SIM_PUK: "SIM PUK required",
+  };
+  return statusMap[pinStatus] || pinStatus;
+}
+
+/**
  * Parses AT+CPIN? response
  * Format: +CPIN: <code>
  * Example: +CPIN: READY
@@ -11,6 +29,17 @@ export function parseCPIN(response: string): string | undefined {
 }
 
 /**
+ * Converts message format mode to human-readable description
+ */
+export function getMessageFormatDescription(mode: number): string {
+  return mode === 0
+    ? "PDU mode (binary)"
+    : mode === 1
+    ? "Text mode"
+    : `Unknown mode (${mode})`;
+}
+
+/**
  * Parses AT+CMGF? response
  * Format: +CMGF: <mode>
  * Example: +CMGF: 1
@@ -18,6 +47,33 @@ export function parseCPIN(response: string): string | undefined {
 export function parseCMGF(response: string): number | undefined {
   const match = response.match(/\+CMGF:\s*(\d+)/i);
   return match ? parseInt(match[1], 10) : undefined;
+}
+
+/**
+ * Converts network registration notification mode to description
+ */
+export function getNetworkRegistrationModeDescription(n: number): string {
+  const modeMap: Record<number, string> = {
+    0: "Notifications disabled",
+    1: "Notifications enabled",
+    2: "Notifications with location info enabled",
+  };
+  return modeMap[n] || `Unknown mode (${n})`;
+}
+
+/**
+ * Converts network registration status to human-readable description
+ */
+export function getNetworkStatusDescription(stat: number): string {
+  const statusMap: Record<number, string> = {
+    0: "Not registered, not searching",
+    1: "Registered (home network)",
+    2: "Not registered, searching",
+    3: "Registration denied",
+    4: "Unknown",
+    5: "Registered (roaming)",
+  };
+  return statusMap[stat] || `Unknown status (${stat})`;
 }
 
 /**
@@ -36,6 +92,47 @@ export function parseCREG(
     };
   }
   return undefined;
+}
+
+/**
+ * Converts RSSI value to dBm
+ */
+export function rssiToDbm(rssi: number): string {
+  if (rssi === 99) return "Unknown or not detectable";
+  if (rssi === 0) return "-113 dBm or less";
+  if (rssi === 31) return "-51 dBm or greater";
+  const dbm = -113 + rssi * 2;
+  return `${dbm} dBm`;
+}
+
+/**
+ * Converts RSSI to signal strength description
+ */
+export function getSignalStrengthDescription(rssi: number): string {
+  if (rssi === 99) return "Unknown";
+  if (rssi >= 20) return "Excellent";
+  if (rssi >= 15) return "Good";
+  if (rssi >= 10) return "Fair";
+  if (rssi >= 5) return "Poor";
+  return "Very Poor";
+}
+
+/**
+ * Converts BER to signal quality description
+ */
+export function getSignalQualityDescription(ber: number): string {
+  if (ber === 99) return "Unknown";
+  const qualityMap: Record<number, string> = {
+    0: "Excellent (< 0.2%)",
+    1: "Good (0.2% - 0.4%)",
+    2: "Fair (0.4% - 0.8%)",
+    3: "Poor (0.8% - 1.6%)",
+    4: "Very Poor (1.6% - 3.2%)",
+    5: "Bad (3.2% - 6.4%)",
+    6: "Very Bad (6.4% - 12.8%)",
+    7: "Extremely Bad (> 12.8%)",
+  };
+  return qualityMap[ber] || `Unknown (${ber})`;
 }
 
 /**
@@ -77,16 +174,47 @@ export function extractDiagnosticsFromResponse(
 
   if (command.includes("+CPIN?")) {
     const pinStatus = parseCPIN(response);
-    if (pinStatus) diagnostics.pinStatus = pinStatus;
+    if (pinStatus) {
+      diagnostics.pinStatus = pinStatus;
+      diagnostics.pinStatusDescription = getPinStatusDescription(pinStatus);
+    }
   } else if (command.includes("+CMGF?")) {
     const messageFormat = parseCMGF(response);
-    if (messageFormat !== undefined) diagnostics.messageFormat = messageFormat;
+    if (messageFormat !== undefined) {
+      diagnostics.messageFormat = messageFormat;
+      diagnostics.messageFormatDescription =
+        getMessageFormatDescription(messageFormat);
+    }
   } else if (command.includes("+CREG?")) {
     const networkReg = parseCREG(response);
-    if (networkReg) diagnostics.networkRegistration = networkReg;
+    if (networkReg) {
+      diagnostics.networkRegistration = networkReg;
+      if (networkReg.n !== undefined) {
+        diagnostics.networkRegistrationDescription =
+          getNetworkRegistrationModeDescription(networkReg.n);
+      }
+      if (networkReg.stat !== undefined) {
+        diagnostics.networkStatusDescription = getNetworkStatusDescription(
+          networkReg.stat
+        );
+      }
+    }
   } else if (command.includes("+CSQ")) {
     const signalQuality = parseCSQ(response);
-    if (signalQuality) diagnostics.signalQuality = signalQuality;
+    if (signalQuality) {
+      diagnostics.signalQuality = signalQuality;
+      if (signalQuality.rssi !== undefined) {
+        diagnostics.rssiValue = rssiToDbm(signalQuality.rssi);
+        diagnostics.signalStrengthDescription = getSignalStrengthDescription(
+          signalQuality.rssi
+        );
+      }
+      if (signalQuality.ber !== undefined) {
+        diagnostics.signalQualityDescription = getSignalQualityDescription(
+          signalQuality.ber
+        );
+      }
+    }
   } else if (command.includes("+CSCA?")) {
     const sca = parseCSCA(response);
     if (sca) diagnostics.serviceCenterAddress = sca;
