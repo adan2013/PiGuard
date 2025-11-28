@@ -328,12 +328,7 @@ export function getCompactStatusReport(
   }
 
   // BER (Bit Error Rate)
-  if (diag.signalQuality?.ber !== undefined) {
-    const ber = diag.signalQuality.ber;
-    if (ber !== 99) {
-      parts.push(`BER: ${ber}`);
-    }
-  } else if (diag.signalQualityDescription) {
+  if (diag.signalQualityDescription) {
     parts.push(`BER: ${diag.signalQualityDescription}`);
   }
 
