@@ -327,9 +327,14 @@ export function getCompactStatusReport(
     parts.push(signalPart);
   }
 
-  // Message Format
-  if (diag.messageFormatDescription) {
-    parts.push(`Format: ${diag.messageFormatDescription}`);
+  // BER (Bit Error Rate)
+  if (diag.signalQuality?.ber !== undefined) {
+    const ber = diag.signalQuality.ber;
+    if (ber !== 99) {
+      parts.push(`BER: ${ber}`);
+    }
+  } else if (diag.signalQualityDescription) {
+    parts.push(`BER: ${diag.signalQualityDescription}`);
   }
 
   return parts.join("; ");
