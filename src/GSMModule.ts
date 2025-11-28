@@ -344,7 +344,11 @@ export class GSMModule {
     return getDetailedStatusReport(this.diagnostics);
   }
 
-  public getCompactStatusReport(): string {
-    return getCompactStatusReport(this.diagnostics, this.config.phoneNumbers);
+  public getCompactStatusReport(sensorStates: boolean[] = []): string {
+    return getCompactStatusReport(
+      this.diagnostics,
+      this.config.phoneNumbers,
+      sensorStates
+    );
   }
 }

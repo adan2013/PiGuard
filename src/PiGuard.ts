@@ -218,8 +218,11 @@ export class PiGuard {
     this.frontPanel.onSwitch2ShortPress(async () => {
       this.frontPanel.playDoubleBeep();
       await this.gsm.performConnectionTest();
-      console.log(this.gsm.getCompactStatusReport());
-      this.gsm.sendToAll(this.gsm.getCompactStatusReport());
+      const sensorStates: boolean[] = Object.entries(this.triggers)
+        .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+        .map(([key]) => this.activeTriggers.has(key));
+      const statusReport = this.gsm.getCompactStatusReport(sensorStates);
+      this.gsm.sendToAll(statusReport);
     });
     this.frontPanel.onSwitch2LongPress(async () => {
       await this.frontPanel.playMelodyDown();
