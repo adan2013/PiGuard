@@ -3,6 +3,7 @@ import { FrontPanel, LedState } from "./FrontPanel";
 import { GSMModule } from "./GSMModule";
 import { TriggerInfo, SystemStatus, SMSResult, GpioPins } from "./types";
 import { shutdownRaspberryPi } from "./utils/shutdownUtils";
+import { logger, errorLogger } from "./utils/logger";
 
 export class PiGuard {
   private config: Config;
@@ -21,9 +22,9 @@ export class PiGuard {
   }
 
   public async initialize(): Promise<void> {
-    console.log("=================================");
-    console.log("     PiGuard Starting Up");
-    console.log("=================================");
+    logger.info(
+      "\n=================================\n     PiGuard Starting Up\n================================="
+    );
 
     this.config.display();
 
@@ -32,7 +33,7 @@ export class PiGuard {
       await this.frontPanel.initialize();
 
       if (this.frontPanel.isSwitch1Pressed()) {
-        console.log(
+        logger.info(
           "[PiGuard] Switch 1 is pressed on startup - disabling SMS alerts"
         );
         this.alertsDisabled = true;
@@ -46,24 +47,23 @@ export class PiGuard {
 
       this.frontPanel.playLongBeep();
       this.updateLedState();
-      console.log("[PiGuard] System ready and monitoring...\n");
+      logger.info("[PiGuard] System ready and monitoring...\n");
       await this.sendStartupNotification();
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error("[PiGuard] Initialization failed:", errorMessage);
+      errorLogger.error("[PiGuard] Initialization failed:", errorMessage);
       throw error;
     }
   }
 
   private async setupTriggers(): Promise<void> {
-    console.log("[PiGuard] Setting up GPIO triggers...");
+    logger.info("[PiGuard] Setting up GPIO triggers...");
 
     if (process.platform !== "linux") {
-      console.warn(
-        `[PiGuard] GPIO is only supported on Linux (Raspberry Pi). Current platform: ${process.platform}`
+      logger.warn(
+        `[PiGuard] GPIO is only supported on Linux (Raspberry Pi). Current platform: ${process.platform}\n[PiGuard] GPIO triggers will not be available.`
       );
-      console.warn("[PiGuard] GPIO triggers will not be available.");
       return;
     }
 
@@ -95,7 +95,7 @@ export class PiGuard {
 
           gpio.watch((err: Error | null | undefined, value: number) => {
             if (err) {
-              console.error(
+              errorLogger.error(
                 `[PiGuard] Error watching ${triggerName} (GPIO ${pin}):`,
                 err
               );
@@ -112,7 +112,7 @@ export class PiGuard {
           });
 
           const initialValue = gpio.readSync();
-          console.log(
+          logger.info(
             `[PiGuard] ✓ ${triggerName} monitoring on GPIO ${pin} (initial state: ${initialValue})`
           );
 
@@ -128,7 +128,7 @@ export class PiGuard {
 
           successCount++;
         } catch (error) {
-          console.error(
+          errorLogger.error(
             `[PiGuard] Failed to setup trigger ${key} (${triggerName}) on GPIO ${pin}:`,
             error
           );
@@ -142,24 +142,24 @@ export class PiGuard {
       }
 
       if (successCount > 0) {
-        console.log(
+        logger.info(
           `[PiGuard] ${successCount} trigger(s) configured successfully\n`
         );
       } else {
-        console.warn("[PiGuard] No GPIO triggers configured\n");
+        logger.warn("[PiGuard] No GPIO triggers configured\n");
       }
     } catch (error) {
-      console.error(`[PiGuard] Failed to load GPIO module:`, error);
+      errorLogger.error(`[PiGuard] Failed to load GPIO module:`, error);
     }
   }
 
   private async handleTrigger(triggerName: string): Promise<void> {
     const uptime = this.config.getUptimeValue();
     const message = `[ALERT] ${triggerName} triggered! Uptime: ${uptime.days}d ${uptime.hours}h`;
-    console.log(`\n${message}`);
+    logger.info(`\n${message}`);
 
     if (this.isInCooldown()) {
-      console.log(`[PiGuard] System is in cooldown period, skipping alert`);
+      logger.info(`[PiGuard] System is in cooldown period, skipping alert`);
       return;
     }
 
@@ -167,8 +167,7 @@ export class PiGuard {
     this.lastAlertTime = Date.now();
 
     if (this.config.disableAlertSMS) {
-      console.log(`[PiGuard] Alert SMS is disabled, skipping SMS sending`);
-      console.log("");
+      logger.info(`[PiGuard] Alert SMS is disabled, skipping SMS sending\n`);
       return;
     }
 
@@ -177,7 +176,7 @@ export class PiGuard {
 
       results.forEach((result) => {
         if (!result.success) {
-          console.error(
+          errorLogger.error(
             `[PiGuard] Failed to send alert to ${result.phoneNumber}: ${result.error}`
           );
         }
@@ -185,13 +184,11 @@ export class PiGuard {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error(
+      errorLogger.error(
         `[PiGuard] Error sending alert for ${triggerName}:`,
         errorMessage
       );
     }
-
-    console.log("");
   }
 
   private isInCooldown(): boolean {
@@ -241,7 +238,7 @@ export class PiGuard {
 
   private async sendStartupNotification(): Promise<void> {
     if (this.config.disableWelcomeSMS) {
-      console.log(
+      logger.info(
         `[PiGuard] Welcome SMS is disabled, skipping startup notification`
       );
       return;
@@ -254,7 +251,7 @@ export class PiGuard {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error(
+      errorLogger.error(
         "[PiGuard] Error sending startup notification:",
         errorMessage
       );
@@ -262,18 +259,18 @@ export class PiGuard {
   }
 
   private async cleanup(): Promise<void> {
-    console.log("\n[PiGuard] Cleaning up resources...");
+    logger.info("\n[PiGuard] Cleaning up resources...");
 
     this.isRunning = false;
 
     Object.entries(this.triggers).forEach(([_key, trigger]) => {
       try {
         trigger.gpio.unexport();
-        console.log(`[PiGuard] Unexported GPIO ${trigger.pin}`);
+        logger.info(`[PiGuard] Unexported GPIO ${trigger.pin}`);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        console.error(
+        errorLogger.error(
           `[PiGuard] Error unexporting GPIO ${trigger.pin}:`,
           errorMessage
         );
@@ -283,7 +280,7 @@ export class PiGuard {
     await this.gsm.close();
     await this.frontPanel.cleanup();
 
-    console.log("[PiGuard] Cleanup complete");
+    logger.info("[PiGuard] Cleanup complete");
   }
 
   public async shutdown(): Promise<void> {

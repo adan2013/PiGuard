@@ -1,4 +1,5 @@
 import { CommandObject, QueueStatus, CommandExecutor } from "./types";
+import { logger, errorLogger } from "./utils/logger";
 
 export class ATCommandQueue {
   private queue: CommandObject[] = [];
@@ -42,27 +43,27 @@ export class ATCommandQueue {
     this.processing = true;
     this.currentCommand = this.queue.shift()!;
 
-    console.log(`[ATQueue] Processing: ${this.currentCommand.command}`);
+    logger.info(`[ATQueue] Processing: ${this.currentCommand.command}`);
 
     try {
       const response = await this.executeCommand(this.currentCommand);
-      console.log(`[ATQueue] Success: ${this.currentCommand.command}`);
+      logger.info(`[ATQueue] Success: ${this.currentCommand.command}`);
       this.currentCommand.resolve(response);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error(
+      errorLogger.error(
         `[ATQueue] Error: ${this.currentCommand.command} - ${errorMessage}`
       );
 
       if (this.currentCommand.retries < this.maxRetries) {
         this.currentCommand.retries++;
-        console.log(
+        logger.info(
           `[ATQueue] Retrying (${this.currentCommand.retries}/${this.maxRetries}): ${this.currentCommand.command}`
         );
         this.queue.unshift(this.currentCommand);
       } else {
-        console.error(
+        errorLogger.error(
           `[ATQueue] Max retries exceeded for: ${this.currentCommand.command}`
         );
         this.currentCommand.reject(
@@ -86,7 +87,7 @@ export class ATCommandQueue {
   }
 
   public clear(): void {
-    console.log(`[ATQueue] Clearing queue (${this.queue.length} commands)`);
+    logger.info(`[ATQueue] Clearing queue (${this.queue.length} commands)`);
     this.queue.forEach((cmd) => {
       cmd.reject(new Error("Queue cleared"));
     });

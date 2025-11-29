@@ -2,6 +2,7 @@ import { Gpio } from "onoff";
 import { spawn } from "child_process";
 import { join } from "path";
 import { Config } from "./Config";
+import { logger, errorLogger } from "./utils/logger";
 
 export enum LedState {
   Off = "Off",
@@ -70,9 +71,9 @@ export class FrontPanel {
       this.setupSwitch1Watcher();
       this.setupSwitch2Watcher();
 
-      console.log("[FrontPanel] Initialized successfully");
+      logger.info("[FrontPanel] Initialized successfully");
     } catch (error) {
-      console.error("[FrontPanel] Failed to initialize GPIO:", error);
+      errorLogger.error("[FrontPanel] Failed to initialize GPIO:", error);
       throw error;
     }
   }
@@ -90,7 +91,7 @@ export class FrontPanel {
     this.currentLedState = state;
 
     if (this.config.disableLED) {
-      console.log(
+      logger.info(
         `[FrontPanel] LED state changed to: ${state} (LED disabled - logging only)`
       );
       return;
@@ -114,7 +115,7 @@ export class FrontPanel {
         break;
     }
 
-    console.log(`[FrontPanel] LED state changed to: ${state}`);
+    logger.info(`[FrontPanel] LED state changed to: ${state}`);
   }
 
   private startLedBlink(intervalMs: number): void {
@@ -166,7 +167,7 @@ export class FrontPanel {
 
       python.on("close", (code) => {
         if (code !== 0) {
-          console.error(
+          errorLogger.error(
             `[FrontPanel] playSound.py exited with code ${code}: ${stderr}`
           );
           reject(new Error(`Python script failed with code ${code}`));
@@ -176,7 +177,7 @@ export class FrontPanel {
       });
 
       python.on("error", (err) => {
-        console.error("[FrontPanel] Failed to spawn Python process:", err);
+        errorLogger.error("[FrontPanel] Failed to spawn Python process:", err);
         reject(err);
       });
     });
@@ -184,7 +185,7 @@ export class FrontPanel {
 
   public async play(sound: SpeakerSound): Promise<void> {
     if (this.config.disableSound) {
-      console.log(
+      logger.info(
         `[FrontPanel] Sound: ${sound} (Sound disabled - logging only)`
       );
       return;
@@ -193,7 +194,7 @@ export class FrontPanel {
     try {
       await this.playSound(sound);
     } catch (error) {
-      console.error(`[FrontPanel] Error playing sound ${sound}:`, error);
+      errorLogger.error(`[FrontPanel] Error playing sound ${sound}:`, error);
     }
   }
 
@@ -227,7 +228,7 @@ export class FrontPanel {
     try {
       this.switch1PreviousState = this.switch1.readSync();
     } catch (error) {
-      console.error(
+      errorLogger.error(
         "[FrontPanel] Error reading initial switch 1 state:",
         error
       );
@@ -236,7 +237,7 @@ export class FrontPanel {
 
     this.switch1.watch((err, value) => {
       if (err) {
-        console.error("[FrontPanel] Switch 1 watch error:", err);
+        errorLogger.error("[FrontPanel] Switch 1 watch error:", err);
         return;
       }
 
@@ -247,10 +248,10 @@ export class FrontPanel {
       this.switch1PreviousState = value;
 
       if (value === 0) {
-        console.log("[FrontPanel] Switch 1: State changed to 0 (pressed)");
+        logger.info("[FrontPanel] Switch 1: State changed to 0 (pressed)");
         this.switch1Pressed?.();
       } else {
-        console.log("[FrontPanel] Switch 1: State changed to 1 (released)");
+        logger.info("[FrontPanel] Switch 1: State changed to 1 (released)");
         this.switch1Released?.();
       }
     });
@@ -268,7 +269,7 @@ export class FrontPanel {
     try {
       return this.switch1?.readSync() === 0;
     } catch (error) {
-      console.error("[FrontPanel] Error reading switch 1:", error);
+      errorLogger.error("[FrontPanel] Error reading switch 1:", error);
       return false;
     }
   }
@@ -282,7 +283,7 @@ export class FrontPanel {
 
     this.switch2.watch((err, value) => {
       if (err) {
-        console.error("[FrontPanel] Switch 2 watch error:", err);
+        errorLogger.error("[FrontPanel] Switch 2 watch error:", err);
         return;
       }
 
@@ -300,7 +301,7 @@ export class FrontPanel {
 
     this.switch2LongPressTimeout = setTimeout(() => {
       this.switch2LongPressTriggered = true;
-      console.log("[FrontPanel] Switch 2: Long press detected");
+      logger.info("[FrontPanel] Switch 2: Long press detected");
       this.switch2LongPress?.();
     }, this.LONG_PRESS_THRESHOLD_MS);
   }
@@ -316,7 +317,7 @@ export class FrontPanel {
       !this.switch2LongPressTriggered
     ) {
       const pressDuration = Date.now() - this.switch2PressStartTime;
-      console.log(
+      logger.info(
         `[FrontPanel] Switch 2: Short press detected (${pressDuration}ms)`
       );
       this.switch2ShortPress?.();
@@ -338,7 +339,7 @@ export class FrontPanel {
   // ============================================
 
   public async cleanup(): Promise<void> {
-    console.log("[FrontPanel] Cleaning up...");
+    logger.info("[FrontPanel] Cleaning up...");
     this.stopLedPattern();
     if (this.switch2LongPressTimeout) {
       clearTimeout(this.switch2LongPressTimeout);
@@ -348,27 +349,27 @@ export class FrontPanel {
       try {
         this.led.writeSync(0);
         this.led.unexport();
-        console.log("[FrontPanel] LED GPIO cleaned up");
+        logger.info("[FrontPanel] LED GPIO cleaned up");
       } catch (error) {
-        console.error("[FrontPanel] Error cleaning up LED:", error);
+        errorLogger.error("[FrontPanel] Error cleaning up LED:", error);
       }
     }
     if (this.switch1) {
       try {
         this.switch1.unwatch();
         this.switch1.unexport();
-        console.log("[FrontPanel] Switch 1 GPIO cleaned up");
+        logger.info("[FrontPanel] Switch 1 GPIO cleaned up");
       } catch (error) {
-        console.error("[FrontPanel] Error cleaning up switch 1:", error);
+        errorLogger.error("[FrontPanel] Error cleaning up switch 1:", error);
       }
     }
     if (this.switch2) {
       try {
         this.switch2.unwatch();
         this.switch2.unexport();
-        console.log("[FrontPanel] Switch 2 GPIO cleaned up");
+        logger.info("[FrontPanel] Switch 2 GPIO cleaned up");
       } catch (error) {
-        console.error("[FrontPanel] Error cleaning up switch 2:", error);
+        errorLogger.error("[FrontPanel] Error cleaning up switch 2:", error);
       }
     }
 

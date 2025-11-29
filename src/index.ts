@@ -1,27 +1,28 @@
 import * as dotenv from "dotenv";
 import { PiGuard } from "./PiGuard";
+import { logger, errorLogger } from "./utils/logger";
 
 dotenv.config();
 
 const piGuard = new PiGuard();
 
 process.on("SIGINT", async () => {
-  console.log("\n[PiGuard] Received SIGINT signal");
+  logger.info("\n[PiGuard] Received SIGINT signal");
   await piGuard.shutdown();
 });
 
 process.on("SIGTERM", async () => {
-  console.log("\n[PiGuard] Received SIGTERM signal");
+  logger.info("\n[PiGuard] Received SIGTERM signal");
   await piGuard.shutdown();
 });
 
 process.on("uncaughtException", (error: Error) => {
-  console.error("[PiGuard] Uncaught exception:", error);
+  errorLogger.error("[PiGuard] Uncaught exception:", error);
   piGuard.shutdown();
 });
 
 process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
-  console.error(
+  errorLogger.error(
     "[PiGuard] Unhandled rejection at:",
     promise,
     "reason:",
@@ -30,6 +31,6 @@ process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
 });
 
 piGuard.initialize().catch((error: Error) => {
-  console.error("[PiGuard] Failed to start:", error.message);
+  errorLogger.error("[PiGuard] Failed to start:", error.message);
   process.exit(1);
 });

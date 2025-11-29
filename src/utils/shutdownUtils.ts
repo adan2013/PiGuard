@@ -1,25 +1,26 @@
 import { exec } from "child_process";
+import { logger, errorLogger } from "./logger";
 
 export function shutdownRaspberryPi(): void {
-  console.log("[PiGuard] Executing system shutdown...");
+  logger.info("[PiGuard] Executing system shutdown...");
 
   exec("sudo shutdown -h now", (error, _stdout, stderr) => {
     if (error) {
-      console.error(`[PiGuard] Error executing shutdown: ${error.message}`);
+      errorLogger.error(`[PiGuard] Error executing shutdown: ${error.message}`);
       // Fallback: try without sudo (in case user has permissions)
       exec("shutdown -h now", (error2) => {
         if (error2) {
-          console.error(
+          errorLogger.error(
             `[PiGuard] Error executing shutdown (fallback): ${error2.message}`
           );
-          console.error("[PiGuard] Please shutdown the system manually");
+          errorLogger.error("[PiGuard] Please shutdown the system manually");
           process.exit(1);
         }
       });
       return;
     }
     if (stderr) {
-      console.error(`[PiGuard] Shutdown stderr: ${stderr}`);
+      errorLogger.error(`[PiGuard] Shutdown stderr: ${stderr}`);
     }
   });
 }

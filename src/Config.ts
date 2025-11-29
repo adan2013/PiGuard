@@ -1,4 +1,5 @@
 import { GpioPins, TriggerNames, FrontPanelGpioPins } from "./types";
+import { logger } from "./utils/logger";
 
 export class Config {
   public readonly startupTimestamp: number;
@@ -83,7 +84,7 @@ export class Config {
     }
 
     if (this.phoneNumbers.length === 0) {
-      console.warn(
+      logger.warn(
         "WARNING: No phone numbers configured. SMS alerts will not be sent."
       );
     }
@@ -109,38 +110,30 @@ export class Config {
   }
 
   public display(): void {
-    console.log("\n=== PiGuard Configuration ===");
-    console.log(`Serial Port: ${this.serialPort}`);
-    console.log(`Baud Rate: ${this.serialBaudrate}`);
-    console.log("\nGPIO Pins:");
-    console.log(
-      `  Trigger 1 (${this.triggerNames.trigger1}): GPIO ${this.gpioPins.trigger1}`
+    logger.info(
+      `\n=== PiGuard Configuration ===\n` +
+        `Serial Port: ${this.serialPort}\n` +
+        `Baud Rate: ${this.serialBaudrate}\n` +
+        `\nGPIO Pins:\n` +
+        `  Trigger 1 (${this.triggerNames.trigger1}): GPIO ${this.gpioPins.trigger1}\n` +
+        `  Trigger 2 (${this.triggerNames.trigger2}): GPIO ${this.gpioPins.trigger2}\n` +
+        `  Trigger 3 (${this.triggerNames.trigger3}): GPIO ${this.gpioPins.trigger3}\n` +
+        `\nFront Panel GPIO:\n` +
+        `  LED: GPIO ${this.frontPanelGpioPins.led}\n` +
+        `  Speaker: GPIO ${this.frontPanelGpioPins.speaker}\n` +
+        `  Switch 1: GPIO ${this.frontPanelGpioPins.switch1}\n` +
+        `  Switch 2: GPIO ${this.frontPanelGpioPins.switch2}\n` +
+        `\nPhone Numbers: ${this.phoneNumbers.join(", ")}\n` +
+        `AT Command Timeout: ${this.atCommandTimeout}ms\n` +
+        `AT Command Retry: ${this.atCommandRetry}\n` +
+        `Welcome SMS: ${this.disableWelcomeSMS ? "DISABLED" : "ENABLED"}\n` +
+        `Alert SMS: ${this.disableAlertSMS ? "DISABLED" : "ENABLED"}\n` +
+        `LED: ${this.disableLED ? "DISABLED" : "ENABLED"}\n` +
+        `Sound: ${this.disableSound ? "DISABLED" : "ENABLED"}\n` +
+        `SMS Cooldown Period: ${this.smsCooldownPeriod}ms (${
+          this.smsCooldownPeriod / 60000
+        } minutes)\n` +
+        `=============================\n`
     );
-    console.log(
-      `  Trigger 2 (${this.triggerNames.trigger2}): GPIO ${this.gpioPins.trigger2}`
-    );
-    console.log(
-      `  Trigger 3 (${this.triggerNames.trigger3}): GPIO ${this.gpioPins.trigger3}`
-    );
-    console.log("\nFront Panel GPIO:");
-    console.log(`  LED: GPIO ${this.frontPanelGpioPins.led}`);
-    console.log(`  Speaker: GPIO ${this.frontPanelGpioPins.speaker}`);
-    console.log(`  Switch 1: GPIO ${this.frontPanelGpioPins.switch1}`);
-    console.log(`  Switch 2: GPIO ${this.frontPanelGpioPins.switch2}`);
-    console.log(`\nPhone Numbers: ${this.phoneNumbers.join(", ")}`);
-    console.log(`AT Command Timeout: ${this.atCommandTimeout}ms`);
-    console.log(`AT Command Retry: ${this.atCommandRetry}`);
-    console.log(
-      `Welcome SMS: ${this.disableWelcomeSMS ? "DISABLED" : "ENABLED"}`
-    );
-    console.log(`Alert SMS: ${this.disableAlertSMS ? "DISABLED" : "ENABLED"}`);
-    console.log(`LED: ${this.disableLED ? "DISABLED" : "ENABLED"}`);
-    console.log(`Sound: ${this.disableSound ? "DISABLED" : "ENABLED"}`);
-    console.log(
-      `SMS Cooldown Period: ${this.smsCooldownPeriod}ms (${
-        this.smsCooldownPeriod / 60000
-      } minutes)`
-    );
-    console.log("=============================\n");
   }
 }

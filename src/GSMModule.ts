@@ -8,6 +8,7 @@ import {
   getDetailedStatusReport,
   getCompactStatusReport,
 } from "./utils/gsmDiagnosticsUtils";
+import { logger, errorLogger } from "./utils/logger";
 
 export { SMSResult, GSMStatus, GSMDiagnostics };
 
@@ -67,7 +68,7 @@ export class GSMModule {
       ];
 
       for (const test of tests) {
-        console.log(`[GSM] ${test.log}`);
+        logger.info(`[GSM] ${test.log}`);
         const response = await this.sendCommand(
           test.command,
           test.expectedResponse
@@ -81,13 +82,13 @@ export class GSMModule {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error("[GSM] Connection test failed:", errorMessage);
+      errorLogger.error("[GSM] Connection test failed:", errorMessage);
       throw error;
     }
   }
 
   public async initialize(): Promise<boolean> {
-    console.log("[GSM] Initializing GSM module...");
+    logger.info("[GSM] Initializing GSM module...");
 
     try {
       this.port = new SerialPort({
@@ -110,7 +111,7 @@ export class GSMModule {
         });
       });
 
-      console.log("[GSM] Serial port opened successfully");
+      logger.info("[GSM] Serial port opened successfully");
 
       await this.delay(2000);
 
@@ -120,16 +121,16 @@ export class GSMModule {
       await this.sendCommand("AT+CNMI=1,2,0,0,0", "OK");
       await this.sendCommand(`AT+CSCS="GSM"`, "OK");
       await this.performConnectionTest();
-      console.log(this.getDetailedStatusReport(this.config));
-
+      const statusReport = this.getDetailedStatusReport(this.config);
+      logger.info(`\n${statusReport}\n`);
+      logger.info(`[GSM] GSM module initialized successfully`);
       this.isReady = true;
-      console.log("[GSM] GSM module initialized successfully");
 
       return true;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error("[GSM] Initialization failed:", errorMessage);
+      errorLogger.error("[GSM] Initialization failed:", errorMessage);
       throw error;
     }
   }
@@ -139,7 +140,7 @@ export class GSMModule {
 
     if (!trimmedData) return;
 
-    console.log(`[GSM] << ${trimmedData}`);
+    logger.info(`[GSM] << ${trimmedData}`);
 
     this.responseBuffer += trimmedData + "\n";
 
@@ -200,9 +201,9 @@ export class GSMModule {
       const { command, expectedResponse, skipCRLF } = commandObj;
 
       if (skipCRLF && command.includes(String.fromCharCode(26))) {
-        console.log(`[GSM] >> ${command.replace(/\x1A/g, "<CTRL+Z>")}`);
+        logger.info(`[GSM] >> ${command.replace(/\x1A/g, "<CTRL+Z>")}`);
       } else {
-        console.log(`[GSM] >> ${command}`);
+        logger.info(`[GSM] >> ${command}`);
       }
 
       this.responseBuffer = "";
@@ -253,13 +254,13 @@ export class GSMModule {
       throw new Error("GSM module not ready");
     }
 
-    console.log(`[GSM] Sending SMS to ${phoneNumber}: ${message}`);
+    logger.info(`[GSM] Sending SMS to ${phoneNumber}: ${message}`);
 
     try {
       if (performConnectionTest) {
         await this.performConnectionTest();
       }
-      console.log("[GSM] Sending SMS...");
+      logger.info("[GSM] Sending SMS...");
       await this.sendCommand(`AT+CMGS="${phoneNumber}"`, null);
 
       await this.delay(600);
@@ -269,12 +270,12 @@ export class GSMModule {
         skipCRLF: true,
       });
 
-      console.log(`[GSM] SMS sent successfully to ${phoneNumber}`);
+      logger.info(`[GSM] SMS sent successfully to ${phoneNumber}`);
       return true;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error(
+      errorLogger.error(
         `[GSM] Failed to send SMS to ${phoneNumber}:`,
         errorMessage
       );
@@ -289,7 +290,7 @@ export class GSMModule {
       return [];
     }
 
-    console.log(`[GSM] Sending to all: ${message}`);
+    logger.info(`[GSM] Sending to all: ${message}`);
     const results: SMSResult[] = [];
 
     for (const phoneNumber of phoneNumbers) {
@@ -299,7 +300,10 @@ export class GSMModule {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        console.error(`[GSM] Failed to send to ${phoneNumber}:`, errorMessage);
+        errorLogger.error(
+          `[GSM] Failed to send to ${phoneNumber}:`,
+          errorMessage
+        );
         results.push({ phoneNumber, success: false, error: errorMessage });
       }
     }
@@ -308,7 +312,7 @@ export class GSMModule {
   }
 
   public async close(): Promise<void> {
-    console.log("[GSM] Closing GSM module...");
+    logger.info("[GSM] Closing GSM module...");
 
     this.commandQueue.clear();
 
@@ -316,7 +320,7 @@ export class GSMModule {
       await new Promise<void>((resolve) => {
         this.port!.close((err) => {
           if (err) {
-            console.error("[GSM] Error closing port:", err.message);
+            errorLogger.error("[GSM] Error closing port:", err.message);
           }
           resolve();
         });
@@ -324,7 +328,7 @@ export class GSMModule {
     }
 
     this.isReady = false;
-    console.log("[GSM] GSM module closed");
+    logger.info("[GSM] GSM module closed");
   }
 
   private delay(ms: number): Promise<void> {
