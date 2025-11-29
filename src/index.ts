@@ -8,6 +8,10 @@ dotenv.config();
 const piGuard = new PiGuard();
 let webServer: WebServer | null = null;
 
+const webPort = parseInt(process.env.WEB_PORT || "8080", 10);
+webServer = new WebServer(piGuard.getConfig(), piGuard.getGSM(), webPort);
+webServer.start();
+
 process.on("SIGINT", async () => {
   logger.warn("\n[PiGuard] Received SIGINT signal");
   if (webServer) {
@@ -41,15 +45,9 @@ process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
   );
 });
 
-piGuard
-  .initialize()
-  .then(() => {
-    // Start web server after PiGuard is initialized
-    const webPort = parseInt(process.env.WEB_PORT || "8080", 10);
-    webServer = new WebServer(piGuard.getConfig(), piGuard.getGSM(), webPort);
-    webServer.start();
-  })
-  .catch((error: Error) => {
-    errorLogger.error("[PiGuard] Failed to start:", error.message);
-    process.exit(1);
-  });
+piGuard.initialize().catch((error: Error) => {
+  errorLogger.error("[PiGuard] Failed to start:", error.message);
+  errorLogger.error(
+    "[PiGuard] Web server is still available for troubleshooting"
+  );
+});

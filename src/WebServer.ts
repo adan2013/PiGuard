@@ -88,8 +88,25 @@ export class WebServer {
 
   private async getGSMConfig(_req: Request, res: Response): Promise<void> {
     try {
-      const diagnostics = this.gsm.getDiagnostics();
-      const status = this.gsm.getStatus();
+      let diagnostics = {};
+      let status: {
+        isReady: boolean;
+        portOpen: boolean;
+        queueStatus: any;
+      } = {
+        isReady: false,
+        portOpen: false,
+        queueStatus: {},
+      };
+
+      try {
+        diagnostics = this.gsm.getDiagnostics();
+        status = this.gsm.getStatus();
+      } catch (error) {
+        logger.warn(
+          "[WebServer] GSM module not initialized, returning default status"
+        );
+      }
 
       const config = {
         serialPort: this.config.serialPort,
