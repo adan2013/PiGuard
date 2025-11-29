@@ -2,7 +2,7 @@ import { exec } from "child_process";
 import { logger, errorLogger } from "./logger";
 
 export function shutdownRaspberryPi(): void {
-  logger.info("[PiGuard] Executing system shutdown...");
+  logger.warn("[PiGuard] Executing system shutdown...");
 
   exec("sudo shutdown -h now", (error, _stdout, stderr) => {
     if (error) {

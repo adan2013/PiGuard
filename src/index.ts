@@ -7,12 +7,12 @@ dotenv.config();
 const piGuard = new PiGuard();
 
 process.on("SIGINT", async () => {
-  logger.info("\n[PiGuard] Received SIGINT signal");
+  logger.warn("\n[PiGuard] Received SIGINT signal");
   await piGuard.shutdown();
 });
 
 process.on("SIGTERM", async () => {
-  logger.info("\n[PiGuard] Received SIGTERM signal");
+  logger.warn("\n[PiGuard] Received SIGTERM signal");
   await piGuard.shutdown();
 });
 
