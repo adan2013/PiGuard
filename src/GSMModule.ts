@@ -351,9 +351,9 @@ export class GSMModule {
 
   public getCompactStatusReport(activeTriggers: Set<string>): string {
     const inputs = [
-      activeTriggers.has(this.config.triggerNames.trigger1),
-      activeTriggers.has(this.config.triggerNames.trigger2),
-      activeTriggers.has(this.config.triggerNames.trigger3),
+      activeTriggers.has("trigger1"),
+      activeTriggers.has("trigger2"),
+      activeTriggers.has("trigger3"),
     ];
     return getCompactStatusReport(
       this.diagnostics,
