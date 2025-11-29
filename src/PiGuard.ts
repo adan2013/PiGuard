@@ -103,8 +103,12 @@ export class PiGuard {
             }
 
             if (value === 1) {
-              this.activeTriggers.add(key);
-              this.handleTrigger(triggerName);
+              // Only trigger alarm if the trigger wasn't already active (state change)
+              const wasAlreadyActive = this.activeTriggers.has(key);
+              if (!wasAlreadyActive) {
+                this.activeTriggers.add(key);
+                this.handleTrigger(triggerName);
+              }
             } else if (value === 0) {
               this.activeTriggers.delete(key);
             }
