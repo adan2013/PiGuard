@@ -217,6 +217,25 @@
         height: 18px;
         cursor: pointer;
       }
+
+      .tab-button {
+        background: #e0e0e0;
+        color: #333;
+      }
+
+      .tab-button:hover {
+        background: #d0d0d0;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      }
+
+      .tab-button.active {
+        background: #667eea;
+        color: white;
+      }
+
+      .tab-button.active:hover {
+        background: #5568d3;
+      }
     </style>
   </head>
   <body>
@@ -242,14 +261,35 @@
       </div>
 
       <div class="card">
-        <h2>Recent Logs</h2>
+        <h2>Recent Logs (Last 1000 lines)</h2>
         <div class="button-group">
           <button onclick="refreshLogs()">Refresh</button>
-          <button onclick="refreshLogs(50)">Last 50 Lines</button>
-          <button onclick="refreshLogs(200)">Last 200 Lines</button>
+        </div>
+        <div class="button-group" style="margin-top: 10px; margin-bottom: 10px">
+          <button
+            id="tab-regular"
+            class="tab-button active"
+            onclick="switchTab('regular')"
+          >
+            Regular Logs
+          </button>
+          <button
+            id="tab-error"
+            class="tab-button"
+            onclick="switchTab('error')"
+          >
+            Error Logs
+          </button>
         </div>
         <div id="logs-container" class="logs-container">
           <div class="loading">Loading logs...</div>
+        </div>
+        <div
+          id="error-logs-container"
+          class="logs-container"
+          style="display: none"
+        >
+          <div class="loading">Loading error logs...</div>
         </div>
       </div>
 
@@ -282,39 +322,76 @@
       const API_BASE = "/api";
 
       // Logs
-      async function refreshLogs(lines = 100) {
+      async function refreshLogs() {
         const container = document.getElementById("logs-container");
+        const errorContainer = document.getElementById("error-logs-container");
         container.innerHTML = '<div class="loading">Loading logs...</div>';
+        errorContainer.innerHTML =
+          '<div class="loading">Loading error logs...</div>';
 
         try {
-          const response = await fetch(`${API_BASE}/logs?lines=${lines}`);
+          const response = await fetch(`${API_BASE}/logs`);
           const data = await response.json();
 
           if (data.error) {
             container.innerHTML = `<div class="error-message">${data.error}</div>`;
+            errorContainer.innerHTML = `<div class="error-message">${data.error}</div>`;
             return;
           }
 
-          if (data.logs.length === 0) {
+          // Display regular logs
+          if (data.logs && data.logs.length > 0) {
+            container.innerHTML = data.logs
+              .map((line) => {
+                let className = "log-line";
+                if (line.includes("[ERROR]") || line.includes("ERROR")) {
+                  className += " error";
+                } else if (line.includes("[WARN]") || line.includes("WARN")) {
+                  className += " warn";
+                } else if (line.includes("[INFO]") || line.includes("INFO")) {
+                  className += " info";
+                }
+                return `<div class="${className}">${escapeHtml(line)}</div>`;
+              })
+              .join("");
+          } else {
             container.innerHTML = '<div class="loading">No logs found</div>';
-            return;
           }
 
-          container.innerHTML = data.logs
-            .map((line) => {
-              let className = "log-line";
-              if (line.includes("[ERROR]") || line.includes("ERROR")) {
-                className += " error";
-              } else if (line.includes("[WARN]") || line.includes("WARN")) {
-                className += " warn";
-              } else if (line.includes("[INFO]") || line.includes("INFO")) {
-                className += " info";
-              }
-              return `<div class="${className}">${escapeHtml(line)}</div>`;
-            })
-            .join("");
+          // Display error logs
+          if (data.errorLogs && data.errorLogs.length > 0) {
+            errorContainer.innerHTML = data.errorLogs
+              .map((line) => {
+                return `<div class="log-line error">${escapeHtml(line)}</div>`;
+              })
+              .join("");
+          } else {
+            errorContainer.innerHTML =
+              '<div class="loading">No error logs found</div>';
+          }
         } catch (error) {
           container.innerHTML = `<div class="error-message">Error loading logs: ${error.message}</div>`;
+          errorContainer.innerHTML = `<div class="error-message">Error loading error logs: ${error.message}</div>`;
+        }
+      }
+
+      // Tab switching
+      function switchTab(tab) {
+        const regularContainer = document.getElementById("logs-container");
+        const errorContainer = document.getElementById("error-logs-container");
+        const regularTab = document.getElementById("tab-regular");
+        const errorTab = document.getElementById("tab-error");
+
+        if (tab === "regular") {
+          regularContainer.style.display = "block";
+          errorContainer.style.display = "none";
+          regularTab.classList.add("active");
+          errorTab.classList.remove("active");
+        } else {
+          regularContainer.style.display = "none";
+          errorContainer.style.display = "block";
+          regularTab.classList.remove("active");
+          errorTab.classList.add("active");
         }
       }
 

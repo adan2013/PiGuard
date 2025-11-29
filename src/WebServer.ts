@@ -43,27 +43,43 @@ export class WebServer {
     });
   }
 
-  private async getLogs(req: Request, res: Response): Promise<void> {
+  private async getLogs(_req: Request, res: Response): Promise<void> {
     try {
       const logFile = join(process.cwd(), "logs", "piguard.log");
-      const lines = parseInt(req.query.lines as string) || 100;
+      const errorLogFile = join(process.cwd(), "logs", "piguard-error.log");
+      const lines = 1000;
 
-      if (!existsSync(logFile)) {
-        res.json({ logs: [], error: "Log file not found" });
-        return;
+      const readLogFile = (filePath: string): Promise<string[]> => {
+        return new Promise((resolve, reject) => {
+          if (!existsSync(filePath)) {
+            resolve([]);
+            return;
+          }
+
+          readFile(filePath, "utf8", (err, data) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            const logLines = data.split("\n").filter((line) => line.trim());
+            const recentLogs = logLines.slice(-lines);
+            resolve(recentLogs);
+          });
+        });
+      };
+
+      try {
+        const [logs, errorLogs] = await Promise.all([
+          readLogFile(logFile),
+          readLogFile(errorLogFile),
+        ]);
+
+        res.json({ logs, errorLogs });
+      } catch (error) {
+        errorLogger.error("[WebServer] Error reading log files:", error);
+        res.status(500).json({ error: "Failed to read log files" });
       }
-
-      readFile(logFile, "utf8", (err, data) => {
-        if (err) {
-          errorLogger.error("[WebServer] Error reading log file:", err);
-          res.status(500).json({ error: "Failed to read log file" });
-          return;
-        }
-
-        const logLines = data.split("\n").filter((line) => line.trim());
-        const recentLogs = logLines.slice(-lines);
-        res.json({ logs: recentLogs });
-      });
     } catch (error) {
       errorLogger.error("[WebServer] Error getting logs:", error);
       res.status(500).json({ error: "Internal server error" });
