@@ -301,4 +301,12 @@ export class PiGuard {
       gsm: this.gsm.getStatus(),
     };
   }
+
+  public getConfig(): Config {
+    return this.config;
+  }
+
+  public getGSM(): GSMModule {
+    return this.gsm;
+  }
 }
