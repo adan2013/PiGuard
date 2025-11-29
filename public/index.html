@@ -441,9 +441,46 @@
             html +=
               '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;"><strong>Diagnostics:</strong></div>';
             for (const [key, value] of Object.entries(data.diagnostics)) {
+              let displayValue = "";
+
+              // Handle special object types
+              if (
+                key === "signalQuality" &&
+                typeof value === "object" &&
+                value !== null
+              ) {
+                const sq = value;
+                const parts = [];
+                if (sq.rssi !== undefined) {
+                  parts.push(`RSSI: ${sq.rssi}`);
+                }
+                if (sq.ber !== undefined) {
+                  parts.push(`BER: ${sq.ber}`);
+                }
+                displayValue = parts.length > 0 ? parts.join(", ") : "N/A";
+              } else if (
+                key === "networkRegistration" &&
+                typeof value === "object" &&
+                value !== null
+              ) {
+                const nr = value;
+                const parts = [];
+                if (nr.n !== undefined) {
+                  parts.push(`Mode: ${nr.n}`);
+                }
+                if (nr.stat !== undefined) {
+                  parts.push(`Status: ${nr.stat}`);
+                }
+                displayValue = parts.length > 0 ? parts.join(", ") : "N/A";
+              } else if (typeof value === "object" && value !== null) {
+                displayValue = JSON.stringify(value);
+              } else {
+                displayValue = String(value);
+              }
+
               html += `<div class="config-item"><span class="config-key">${escapeHtml(
                 key
-              )}:</span> ${escapeHtml(String(value))}</div>`;
+              )}:</span> ${escapeHtml(displayValue)}</div>`;
             }
           }
 
