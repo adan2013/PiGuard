@@ -29,15 +29,12 @@ export class WebServer {
   }
 
   private setupRoutes(): void {
-    // API Routes
     this.app.get("/api/logs", this.getLogs.bind(this));
     this.app.get("/api/gsm-config", this.getGSMConfig.bind(this));
     this.app.get("/api/env", this.getEnvFile.bind(this));
     this.app.post("/api/env", this.saveEnvFile.bind(this));
     this.app.post("/api/shutdown", this.shutdownSystem.bind(this));
     this.app.post("/api/reboot", this.rebootSystem.bind(this));
-
-    // Serve UI
     this.app.get("/", (_req: Request, res: Response) => {
       res.sendFile(join(process.cwd(), "public", "index.html"));
     });

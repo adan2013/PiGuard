@@ -63,7 +63,7 @@
         background: #667eea;
         color: white;
         border: none;
-        padding: 12px 24px;
+        padding: 6px 12px;
         border-radius: 6px;
         cursor: pointer;
         font-size: 14px;
@@ -261,11 +261,9 @@
       </div>
 
       <div class="card">
-        <h2>Recent Logs (Last 1000 lines)</h2>
+        <h2>Recent Logs (Last 1000)</h2>
         <div class="button-group">
-          <button onclick="refreshLogs()">Refresh</button>
-        </div>
-        <div class="button-group" style="margin-top: 10px; margin-bottom: 10px">
+          <button onclick="refreshLogs()">Refresh Data</button>
           <button
             id="tab-regular"
             class="tab-button active"
@@ -301,7 +299,7 @@
       </div>
 
       <div class="card">
-        <h2>Environment File (.env)</h2>
+        <h2>Environment Variables</h2>
         <div id="env-message"></div>
         <textarea
           id="env-content"
