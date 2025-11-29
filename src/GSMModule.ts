@@ -349,7 +349,16 @@ export class GSMModule {
     return getDetailedStatusReport(this.diagnostics);
   }
 
-  public getCompactStatusReport(): string {
-    return getCompactStatusReport(this.diagnostics);
+  public getCompactStatusReport(activeTriggers: Set<string>): string {
+    const inputs = [
+      activeTriggers.has(this.config.triggerNames.trigger1),
+      activeTriggers.has(this.config.triggerNames.trigger2),
+      activeTriggers.has(this.config.triggerNames.trigger3),
+    ];
+    return getCompactStatusReport(
+      this.diagnostics,
+      this.config.phoneNumbers,
+      inputs
+    );
   }
 }

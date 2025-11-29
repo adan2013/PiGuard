@@ -218,7 +218,9 @@ export class PiGuard {
     this.frontPanel.onSwitch2ShortPress(async () => {
       this.frontPanel.playDoubleBeep();
       await this.gsm.performConnectionTest();
-      await this.gsm.sendToAll(this.gsm.getCompactStatusReport());
+      await this.gsm.sendToAll(
+        this.gsm.getCompactStatusReport(this.activeTriggers)
+      );
     });
     this.frontPanel.onSwitch2LongPress(async () => {
       await this.frontPanel.playMelodyDown();
@@ -247,7 +249,9 @@ export class PiGuard {
     }
 
     try {
-      await this.gsm.sendToAll(this.gsm.getCompactStatusReport());
+      await this.gsm.sendToAll(
+        this.gsm.getCompactStatusReport(this.activeTriggers)
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);

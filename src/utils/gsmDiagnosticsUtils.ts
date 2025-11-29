@@ -443,7 +443,11 @@ export function getDetailedStatusReport(diagnostics: GSMDiagnostics): string {
   return lines.join("\n");
 }
 
-export function getCompactStatusReport(diagnostics: GSMDiagnostics): string {
+export function getCompactStatusReport(
+  diagnostics: GSMDiagnostics,
+  phoneNumbers: string[] = [],
+  inputStates: boolean[] = []
+): string {
   const diag = diagnostics;
   const parts: string[] = [];
 
@@ -472,11 +476,18 @@ export function getCompactStatusReport(diagnostics: GSMDiagnostics): string {
 
   // Signal Strength
   if (diag.signalStrengthDescription) {
-    let signalPart = `SIG:${diag.signalStrengthDescription}`;
-    if (diag.rssiValue) {
-      signalPart += ` (${diag.rssiValue})`;
-    }
-    parts.push(signalPart);
+    parts.push(`SIG:${diag.signalStrengthDescription}`);
+  }
+
+  // Phone Numbers
+  if (phoneNumbers.length > 0) {
+    parts.push(`PH:${phoneNumbers.length}`);
+  }
+
+  // Input States
+  if (inputStates.length > 0) {
+    const states = inputStates.map((state) => (state ? "1" : "0")).join("");
+    parts.push(`IN:${states}`);
   }
 
   return parts.join("; ");
