@@ -155,9 +155,8 @@ export class PiGuard {
 
   private async handleTrigger(triggerName: string): Promise<void> {
     const uptime = this.config.getUptimeValue();
-    console.log(
-      `\n[ALERT] ${triggerName} TRIGGERED! Uptime: ${uptime.days}d ${uptime.hours}h`
-    );
+    const message = `[ALERT] ${triggerName} triggered! Uptime: ${uptime.days}d ${uptime.hours}h`;
+    console.log(`\n${message}`);
 
     if (this.isInCooldown()) {
       console.log(`[PiGuard] System is in cooldown period, skipping alert`);
@@ -174,9 +173,7 @@ export class PiGuard {
     }
 
     try {
-      const results: SMSResult[] = await this.gsm.sendToAll(
-        `ALERT: ${triggerName}`
-      );
+      const results: SMSResult[] = await this.gsm.sendToAll(message);
 
       results.forEach((result) => {
         if (!result.success) {
