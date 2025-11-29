@@ -1,6 +1,7 @@
 import { GpioPins, TriggerNames, FrontPanelGpioPins } from "./types";
 
 export class Config {
+  public readonly startupTimestamp: number;
   public readonly serialPort: string;
   public readonly serialBaudrate: number;
   public readonly gpioPins: GpioPins;
@@ -17,6 +18,7 @@ export class Config {
   public readonly gpioLegacyOffset: number;
 
   constructor() {
+    this.startupTimestamp = Date.now();
     this.serialPort = process.env.SERIAL_PORT || "/dev/ttyUSB0";
     this.serialBaudrate = parseInt(process.env.SERIAL_BAUDRATE || "9600", 10);
 
@@ -95,6 +97,15 @@ export class Config {
         throw new Error(`Invalid GPIO pin configuration for ${key}: ${pin}`);
       }
     });
+  }
+
+  public getUptimeValue(): { days: number; hours: number } {
+    const uptime = Date.now() - this.startupTimestamp;
+    const days = Math.floor(uptime / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(
+      (uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+    );
+    return { days, hours };
   }
 
   public display(): void {

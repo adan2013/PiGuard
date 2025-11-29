@@ -154,8 +154,10 @@ export class PiGuard {
   }
 
   private async handleTrigger(triggerName: string): Promise<void> {
-    const timestamp = new Date().toISOString();
-    console.log(`\n[ALERT] ${timestamp} - ${triggerName} TRIGGERED!`);
+    const uptime = this.config.getUptimeValue();
+    console.log(
+      `\n[ALERT] ${triggerName} TRIGGERED! Uptime: ${uptime.days}d ${uptime.hours}h`
+    );
 
     if (this.isInCooldown()) {
       console.log(`[PiGuard] System is in cooldown period, skipping alert`);

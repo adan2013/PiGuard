@@ -78,8 +78,6 @@ export class GSMModule {
         );
         Object.assign(this.diagnostics, diagnostics);
       }
-
-      this.diagnostics.lastUpdated = new Date();
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -122,7 +120,7 @@ export class GSMModule {
       await this.sendCommand("AT+CNMI=1,2,0,0,0", "OK");
       await this.sendCommand(`AT+CSCS="GSM"`, "OK");
       await this.performConnectionTest();
-      console.log(this.getDetailedStatusReport());
+      console.log(this.getDetailedStatusReport(this.config));
 
       this.isReady = true;
       console.log("[GSM] GSM module initialized successfully");
@@ -345,8 +343,8 @@ export class GSMModule {
     return { ...this.diagnostics };
   }
 
-  public getDetailedStatusReport(): string {
-    return getDetailedStatusReport(this.diagnostics);
+  public getDetailedStatusReport(config: Config): string {
+    return getDetailedStatusReport(this.diagnostics, config);
   }
 
   public getCompactStatusReport(activeTriggers: Set<string>): string {
@@ -355,10 +353,6 @@ export class GSMModule {
       activeTriggers.has("trigger2"),
       activeTriggers.has("trigger3"),
     ];
-    return getCompactStatusReport(
-      this.diagnostics,
-      this.config.phoneNumbers,
-      inputs
-    );
+    return getCompactStatusReport(this.diagnostics, this.config, inputs);
   }
 }

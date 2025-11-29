@@ -1,4 +1,5 @@
 import { GSMDiagnostics } from "../types";
+import { Config } from "../Config";
 
 /**
  * Converts PIN status to short description
@@ -371,7 +372,10 @@ export function extractDiagnosticsFromResponse(
   return diagnostics;
 }
 
-export function getDetailedStatusReport(diagnostics: GSMDiagnostics): string {
+export function getDetailedStatusReport(
+  diagnostics: GSMDiagnostics,
+  config: Config
+): string {
   const diag = diagnostics;
   const lines: string[] = [];
 
@@ -433,10 +437,9 @@ export function getDetailedStatusReport(diagnostics: GSMDiagnostics): string {
     lines.push(`Service Center Address: ${diag.serviceCenterAddress}`);
   }
 
-  // Last Updated
-  if (diag.lastUpdated) {
-    lines.push(`Last Updated: ${diag.lastUpdated.toLocaleString()}`);
-  }
+  // Uptime
+  const uptime = config.getUptimeValue();
+  lines.push(`Uptime: ${uptime.days}d ${uptime.hours}h`);
 
   lines.push("=====================================");
 
@@ -445,7 +448,7 @@ export function getDetailedStatusReport(diagnostics: GSMDiagnostics): string {
 
 export function getCompactStatusReport(
   diagnostics: GSMDiagnostics,
-  phoneNumbers: string[] = [],
+  config: Config,
   inputStates: boolean[] = []
 ): string {
   const diag = diagnostics;
@@ -480,9 +483,13 @@ export function getCompactStatusReport(
   }
 
   // Phone Numbers
-  if (phoneNumbers.length > 0) {
-    parts.push(`PH:${phoneNumbers.length}`);
+  if (config.phoneNumbers.length > 0) {
+    parts.push(`PH:${config.phoneNumbers.length}`);
   }
+
+  // Uptime
+  const uptime = config.getUptimeValue();
+  parts.push(`UPT:${uptime.days}d${uptime.hours}h`);
 
   // Input States
   if (inputStates.length > 0) {

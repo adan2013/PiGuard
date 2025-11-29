@@ -36,7 +36,6 @@ export interface GSMDiagnostics {
   currentOperator?: string;
   accessTechnology?: number;
   accessTechnologyDescription?: string;
-  lastUpdated?: Date;
   // Human-readable descriptions
   pinStatusDescription?: string;
   messageFormatDescription?: string;
