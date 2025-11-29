@@ -264,6 +264,9 @@
         <h2>Recent Logs (Last 1000)</h2>
         <div class="button-group" style="margin-bottom: 10px">
           <button onclick="refreshLogs()">Refresh Data</button>
+          <button onclick="scrollToBottom()">Scroll to Bottom</button>
+        </div>
+        <div class="button-group" style="margin-bottom: 10px">
           <button
             id="tab-regular"
             class="tab-button active"
@@ -367,9 +370,29 @@
             errorContainer.innerHTML =
               '<div class="loading">No error logs found</div>';
           }
+
+          // Scroll to bottom after refresh
+          setTimeout(() => {
+            scrollToBottom();
+          }, 100);
         } catch (error) {
           container.innerHTML = `<div class="error-message">Error loading logs: ${error.message}</div>`;
           errorContainer.innerHTML = `<div class="error-message">Error loading error logs: ${error.message}</div>`;
+        }
+      }
+
+      // Scroll to bottom
+      function scrollToBottom() {
+        const regularContainer = document.getElementById("logs-container");
+        const errorContainer = document.getElementById("error-logs-container");
+        const regularTab = document.getElementById("tab-regular");
+        const errorTab = document.getElementById("tab-error");
+
+        // Scroll the active container to bottom
+        if (regularTab.classList.contains("active")) {
+          regularContainer.scrollTop = regularContainer.scrollHeight;
+        } else {
+          errorContainer.scrollTop = errorContainer.scrollHeight;
         }
       }
 
