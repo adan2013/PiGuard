@@ -143,10 +143,10 @@ export class PiGuard {
 
       if (successCount > 0) {
         logger.info(
-          `[PiGuard] ${successCount} trigger(s) configured successfully\n`
+          `[PiGuard] ${successCount} trigger(s) configured successfully`
         );
       } else {
-        logger.warn("[PiGuard] No GPIO triggers configured\n");
+        logger.warn("[PiGuard] No GPIO triggers configured");
       }
     } catch (error) {
       errorLogger.error(`[PiGuard] Failed to load GPIO module:`, error);
