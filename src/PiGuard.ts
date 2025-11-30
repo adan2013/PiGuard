@@ -159,7 +159,7 @@ export class PiGuard {
 
   private async handleTrigger(triggerName: string): Promise<void> {
     const uptime = this.config.getUptimeValue();
-    const message = `[ALERT] ${triggerName} triggered! Uptime: ${uptime.days}d ${uptime.hours}h`;
+    const message = `ALERT: ${triggerName} triggered! Uptime: ${uptime.days}d ${uptime.hours}h`;
     logger.warn(`${message}`);
 
     if (this.isInCooldown()) {

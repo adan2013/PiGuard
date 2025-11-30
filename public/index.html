@@ -156,31 +156,12 @@
       }
 
       .config-item {
-        margin-bottom: 8px;
+        margin-bottom: 2px;
       }
 
       .config-key {
         color: #667eea;
         font-weight: bold;
-      }
-
-      .status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 11px;
-        font-weight: 600;
-        margin-left: 8px;
-      }
-
-      .status-badge.ready {
-        background: #2ecc71;
-        color: white;
-      }
-
-      .status-badge.not-ready {
-        background: #e74c3c;
-        color: white;
       }
 
       .loading {
@@ -249,19 +230,15 @@
         <h2>System Controls</h2>
         <div class="button-group">
           <button onclick="refreshLogs()">Refresh Logs</button>
-          <button onclick="refreshGSMConfig()">Refresh GSM Config</button>
+          <button onclick="refreshGSMConfig()">Refresh Config</button>
           <button onclick="loadEnvFile()">Load .env File</button>
-          <button class="warning" onclick="rebootSystem()">
-            Reboot System
-          </button>
-          <button class="danger" onclick="shutdownSystem()">
-            Shutdown System
-          </button>
+          <button class="warning" onclick="rebootSystem()">Reboot</button>
+          <button class="danger" onclick="shutdownSystem()">Shutdown</button>
         </div>
       </div>
 
       <div class="card">
-        <h2>Recent Logs (Last 1000)</h2>
+        <h2>Recent Logs</h2>
         <div class="button-group" style="margin-bottom: 10px">
           <button onclick="refreshLogs()">Refresh Data</button>
           <button onclick="scrollToBottom()">Scroll to Bottom</button>
@@ -451,12 +428,9 @@
             data.smsCooldownPeriod
           }ms (${Math.floor(data.smsCooldownPeriod / 60000)} minutes)</div>`;
           html += `<div class="config-item"><span class="config-key">Status:</span> `;
-          html += `<span class="status-badge ${
-            data.status.isReady ? "ready" : "not-ready"
-          }">${data.status.isReady ? "Ready" : "Not Ready"}</span>`;
-          html += `<span class="status-badge ${
-            data.status.portOpen ? "ready" : "not-ready"
-          }">Port ${data.status.portOpen ? "Open" : "Closed"}</span></div>`;
+          html += `${data.status.isReady ? "Ready" : "Not Ready"} - Port ${
+            data.status.portOpen ? "Open" : "Closed"
+          }</div>`;
 
           if (Object.keys(data.diagnostics).length > 0) {
             html +=
