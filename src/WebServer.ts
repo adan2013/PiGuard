@@ -2,22 +2,19 @@ import express, { Request, Response } from "express";
 import { Server } from "http";
 import { readFile, writeFile, existsSync } from "fs";
 import { join } from "path";
-import { Config } from "./Config";
-import { GSMModule } from "./GSMModule";
+import { PiGuard } from "./PiGuard";
 import { shutdownRaspberryPi, rebootRaspberryPi } from "./utils/shutdownUtils";
 import { logger, errorLogger } from "./utils/logger";
 
 export class WebServer {
   private app: express.Application;
   private server: Server | null = null;
-  private config: Config;
-  private gsm: GSMModule;
+  private piGuard: PiGuard;
   private port: number;
 
-  constructor(config: Config, gsm: GSMModule, port: number = 8080) {
+  constructor(piGuard: PiGuard, port: number = 8080) {
     this.app = express();
-    this.config = config;
-    this.gsm = gsm;
+    this.piGuard = piGuard;
     this.port = port;
     this.setupMiddleware();
     this.setupRoutes();
@@ -31,6 +28,7 @@ export class WebServer {
   private setupRoutes(): void {
     this.app.get("/api/logs", this.getLogs.bind(this));
     this.app.get("/api/gsm-config", this.getGSMConfig.bind(this));
+    this.app.get("/api/inputs", this.getInputs.bind(this));
     this.app.get("/api/env", this.getEnvFile.bind(this));
     this.app.post("/api/env", this.saveEnvFile.bind(this));
     this.app.post("/api/shutdown", this.shutdownSystem.bind(this));
@@ -85,6 +83,9 @@ export class WebServer {
 
   private async getGSMConfig(_req: Request, res: Response): Promise<void> {
     try {
+      const config = this.piGuard.getConfig();
+      const gsm = this.piGuard.getGSM();
+
       let diagnostics = {};
       let status: {
         isReady: boolean;
@@ -97,23 +98,23 @@ export class WebServer {
       };
 
       try {
-        diagnostics = this.gsm.getDiagnostics();
-        status = this.gsm.getStatus();
+        diagnostics = gsm.getDiagnostics();
+        status = gsm.getStatus();
       } catch (error) {
         logger.warn(
           "[WebServer] GSM module not initialized, returning default status"
         );
       }
 
-      const config = {
-        serialPort: this.config.serialPort,
-        serialBaudrate: this.config.serialBaudrate,
-        phoneNumbers: this.config.phoneNumbers,
-        atCommandTimeout: this.config.atCommandTimeout,
-        atCommandRetry: this.config.atCommandRetry,
-        disableWelcomeSMS: this.config.disableWelcomeSMS,
-        disableAlertSMS: this.config.disableAlertSMS,
-        smsCooldownPeriod: this.config.smsCooldownPeriod,
+      const response = {
+        serialPort: config.serialPort,
+        serialBaudrate: config.serialBaudrate,
+        phoneNumbers: config.phoneNumbers,
+        atCommandTimeout: config.atCommandTimeout,
+        atCommandRetry: config.atCommandRetry,
+        disableWelcomeSMS: config.disableWelcomeSMS,
+        disableAlertSMS: config.disableAlertSMS,
+        smsCooldownPeriod: config.smsCooldownPeriod,
         status: {
           isReady: status.isReady,
           portOpen: status.portOpen,
@@ -122,9 +123,24 @@ export class WebServer {
         diagnostics: diagnostics,
       };
 
-      res.json(config);
+      res.json(response);
     } catch (error) {
       errorLogger.error("[WebServer] Error getting GSM config:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  private async getInputs(_req: Request, res: Response): Promise<void> {
+    try {
+      const inputs = this.piGuard.getInputStates();
+      const mappedInputs = inputs.map((input) => ({
+        number: input.number,
+        name: input.name,
+        state: input.state ? "DETECTED" : "CLEAR",
+      }));
+      res.json({ inputs: mappedInputs });
+    } catch (error) {
+      errorLogger.error("[WebServer] Error getting inputs:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   }

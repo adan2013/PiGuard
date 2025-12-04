@@ -313,4 +313,46 @@ export class PiGuard {
   public getGSM(): GSMModule {
     return this.gsm;
   }
+
+  public getInputStates(): Array<{
+    number: number;
+    name: string;
+    state: boolean;
+  }> {
+    const inputs: Array<{
+      number: number;
+      name: string;
+      state: boolean;
+    }> = [];
+
+    const triggerKeys = ["trigger1", "trigger2", "trigger3"] as const;
+
+    triggerKeys.forEach((key, index) => {
+      const triggerName =
+        this.config.triggerNames[key] || `Trigger ${index + 1}`;
+      let state: boolean = false;
+
+      if (this.activeTriggers.has(key)) {
+        state = true;
+      } else {
+        const trigger = this.triggers[key];
+        if (trigger && trigger.gpio) {
+          try {
+            const value = trigger.gpio.readSync();
+            state = value === 1;
+          } catch (error) {
+            state = false;
+          }
+        }
+      }
+
+      inputs.push({
+        number: index + 1,
+        name: triggerName,
+        state: state,
+      });
+    });
+
+    return inputs;
+  }
 }

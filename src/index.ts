@@ -9,7 +9,7 @@ const piGuard = new PiGuard();
 let webServer: WebServer | null = null;
 
 const webPort = parseInt(process.env.WEB_PORT || "8080", 10);
-webServer = new WebServer(piGuard.getConfig(), piGuard.getGSM(), webPort);
+webServer = new WebServer(piGuard, webPort);
 webServer.start();
 
 process.on("SIGINT", async () => {
