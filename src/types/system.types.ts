@@ -11,12 +11,11 @@ export interface TriggerStatus {
   key: string;
   name: string;
   pin: number;
-  cooldown: boolean;
 }
 
 export interface SystemStatus {
   running: boolean;
+  inCooldown: boolean;
   triggers: TriggerStatus[];
   gsm: GSMStatus;
 }
-

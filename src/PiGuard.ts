@@ -216,11 +216,8 @@ export class PiGuard {
       this.updateLedState();
     });
     this.frontPanel.onSwitch2ShortPress(async () => {
-      this.frontPanel.playDoubleBeep();
-      await this.gsm.performConnectionTest();
-      await this.gsm.sendToAll(
-        this.gsm.getCompactStatusReport(this.activeTriggers)
-      );
+      this.frontPanel.playSingleBeep();
+      await this.sendDiagnosticSMS();
     });
     this.frontPanel.onSwitch2LongPress(async () => {
       await this.frontPanel.playMelodyDown();
@@ -296,11 +293,11 @@ export class PiGuard {
     const inCooldown = this.isInCooldown();
     return {
       running: this.isRunning,
+      inCooldown: inCooldown,
       triggers: Object.entries(this.triggers).map(([key, trigger]) => ({
         key,
         name: trigger.name,
         pin: trigger.pin,
-        cooldown: inCooldown,
       })),
       gsm: this.gsm.getStatus(),
     };
@@ -312,6 +309,12 @@ export class PiGuard {
 
   public getGSM(): GSMModule {
     return this.gsm;
+  }
+
+  public async sendDiagnosticSMS(): Promise<SMSResult[]> {
+    await this.gsm.performConnectionTest();
+    const statusReport = this.gsm.getCompactStatusReport(this.activeTriggers);
+    return await this.gsm.sendToAll(statusReport);
   }
 
   public getInputStates(): Array<{

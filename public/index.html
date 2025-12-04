@@ -231,7 +231,6 @@
         padding: 12px;
         background: #f8f9fa;
         border-radius: 6px;
-        border-left: 4px solid #e0e0e0;
       }
 
       .input-number {
@@ -279,8 +278,20 @@
         <h2>System Controls</h2>
         <div class="button-group">
           <button onclick="reloadAllData()">Reload All Data</button>
+          <button onclick="sendDiagnosticSMS()">Send Diagnostic SMS</button>
           <button class="warning" onclick="rebootSystem()">Reboot</button>
           <button class="danger" onclick="shutdownSystem()">Shutdown</button>
+        </div>
+        <div
+          id="system-status"
+          style="
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+          "
+        >
+          <div class="loading">Loading system status...</div>
         </div>
       </div>
 
@@ -640,11 +651,71 @@
         }
       }
 
+      // System Status
+      async function refreshSystemStatus() {
+        const container = document.getElementById("system-status");
+        try {
+          const response = await fetch(`${API_BASE}/status`);
+          const data = await response.json();
+
+          if (data.error) {
+            container.innerHTML = `<div class="error-message">${data.error}</div>`;
+            return;
+          }
+
+          const uptimeText = `${data.uptime.days}d ${data.uptime.hours}h`;
+          const cooldownText = data.inCooldown
+            ? '<span style="color: #f39c12; font-weight: bold;">IN COOLDOWN</span>'
+            : '<span style="color: #27ae60; font-weight: bold;">ACTIVE</span>';
+          const runningText = data.running
+            ? '<span style="color: #27ae60;">Running</span>'
+            : '<span style="color: #e74c3c;">Stopped</span>';
+
+          container.innerHTML = `
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+              <div><strong>Uptime:</strong> ${uptimeText}</div>
+              <div><strong>Status:</strong> ${runningText}</div>
+              <div><strong>Cooldown:</strong> ${cooldownText}</div>
+            </div>
+          `;
+        } catch (error) {
+          container.innerHTML = `<div class="error-message">Error loading system status: ${error.message}</div>`;
+        }
+      }
+
+      // Send Diagnostic SMS
+      async function sendDiagnosticSMS() {
+        if (
+          !confirm(
+            "Send diagnostic SMS to all configured phone numbers? This will perform a connection test and send a status report."
+          )
+        ) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE}/send-diagnostic-sms`, {
+            method: "POST",
+          });
+          const data = await response.json();
+
+          if (data.error) {
+            alert(`Error: ${data.error}`);
+            return;
+          }
+
+          alert(data.message || "Diagnostic SMS sent successfully");
+        } catch (error) {
+          alert(`Error: ${error.message}`);
+        }
+      }
+
       // Reload all data
       function reloadAllData() {
         refreshLogs();
         refreshInputs();
         refreshGSMConfig();
+        refreshSystemStatus();
         loadEnvFile();
       }
 
@@ -697,6 +768,7 @@
         refreshLogs();
         refreshInputs();
         refreshGSMConfig();
+        refreshSystemStatus();
         loadEnvFile();
       });
     </script>

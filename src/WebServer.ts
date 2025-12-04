@@ -29,8 +29,13 @@ export class WebServer {
     this.app.get("/api/logs", this.getLogs.bind(this));
     this.app.get("/api/gsm-config", this.getGSMConfig.bind(this));
     this.app.get("/api/inputs", this.getInputs.bind(this));
+    this.app.get("/api/status", this.getSystemStatus.bind(this));
     this.app.get("/api/env", this.getEnvFile.bind(this));
     this.app.post("/api/env", this.saveEnvFile.bind(this));
+    this.app.post(
+      "/api/send-diagnostic-sms",
+      this.sendDiagnosticSMS.bind(this)
+    );
     this.app.post("/api/shutdown", this.shutdownSystem.bind(this));
     this.app.post("/api/reboot", this.rebootSystem.bind(this));
     this.app.get("/", (_req: Request, res: Response) => {
@@ -141,6 +146,39 @@ export class WebServer {
       res.json({ inputs: mappedInputs });
     } catch (error) {
       errorLogger.error("[WebServer] Error getting inputs:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  private async getSystemStatus(_req: Request, res: Response): Promise<void> {
+    try {
+      const config = this.piGuard.getConfig();
+      const status = this.piGuard.getStatus();
+      const uptime = config.getUptimeValue();
+
+      res.json({
+        uptime: {
+          days: uptime.days,
+          hours: uptime.hours,
+        },
+        running: status.running,
+        inCooldown: status.inCooldown,
+      });
+    } catch (error) {
+      errorLogger.error("[WebServer] Error getting system status:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  private async sendDiagnosticSMS(_req: Request, res: Response): Promise<void> {
+    try {
+      await this.piGuard.sendDiagnosticSMS();
+      res.json({
+        success: true,
+        message: "Diagnostic SMS sent successfully",
+      });
+    } catch (error) {
+      errorLogger.error("[WebServer] Error sending diagnostic SMS:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
