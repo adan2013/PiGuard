@@ -312,6 +312,10 @@ export class PiGuard {
     return this.gsm;
   }
 
+  public getFrontPanel(): FrontPanel {
+    return this.frontPanel;
+  }
+
   public async sendDiagnosticSMS(): Promise<SMSResult[]> {
     await this.gsm.performConnectionTest();
     const statusReport = this.gsm.getCompactStatusReport(this.activeTriggers);

@@ -250,7 +250,8 @@ export class WebServer {
       logger.warn("[WebServer] Shutdown requested via web interface");
       res.json({ success: true, message: "Shutting down..." });
 
-      setTimeout(() => {
+      setTimeout(async () => {
+        await this.piGuard.getFrontPanel().playLongBeep();
         shutdownRaspberryPi();
       }, 1000);
     } catch (error) {
@@ -264,7 +265,8 @@ export class WebServer {
       logger.warn("[WebServer] Reboot requested via web interface");
       res.json({ success: true, message: "Rebooting..." });
 
-      setTimeout(() => {
+      setTimeout(async () => {
+        await this.piGuard.getFrontPanel().playLongBeep();
         rebootRaspberryPi();
       }, 1000);
     } catch (error) {
