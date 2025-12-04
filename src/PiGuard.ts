@@ -40,6 +40,7 @@ export class PiGuard {
         this.frontPanel.setLedState(LedState.SolidOn);
       }
 
+      this.lastAlertTime = Date.now(); // Prevent immediate alert SMS
       await this.setupTriggers();
       this.setupFrontPanelHandlers();
 

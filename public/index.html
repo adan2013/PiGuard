@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PiGuard Control Panel</title>
+    <title>PiGuard Web Control Panel</title>
     <style>
       * {
         margin: 0;
@@ -270,7 +270,7 @@
   <body>
     <div class="container">
       <header>
-        <h1>🛡️ PiGuard Control Panel</h1>
+        <h1>PiGuard Web Control Panel</h1>
         <p>Monitor and control your PiGuard system</p>
       </header>
 
@@ -665,8 +665,8 @@
 
           const uptimeText = `${data.uptime.days}d ${data.uptime.hours}h`;
           const cooldownText = data.inCooldown
-            ? '<span style="color: #f39c12; font-weight: bold;">IN COOLDOWN</span>'
-            : '<span style="color: #27ae60; font-weight: bold;">ACTIVE</span>';
+            ? '<span style="color: #f39c12; font-weight: bold;">YES</span>'
+            : '<span style="color: #27ae60; font-weight: bold;">NO</span>';
           const runningText = data.running
             ? '<span style="color: #27ae60;">Running</span>'
             : '<span style="color: #e74c3c;">Stopped</span>';
