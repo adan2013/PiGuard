@@ -251,7 +251,7 @@ export class WebServer {
       res.json({ success: true, message: "Shutting down..." });
 
       setTimeout(async () => {
-        await this.piGuard.getFrontPanel().playLongBeep();
+        await this.piGuard.getFrontPanel().playMelodyDown();
         shutdownRaspberryPi();
       }, 1000);
     } catch (error) {
@@ -266,7 +266,7 @@ export class WebServer {
       res.json({ success: true, message: "Rebooting..." });
 
       setTimeout(async () => {
-        await this.piGuard.getFrontPanel().playLongBeep();
+        await this.piGuard.getFrontPanel().playMelodyDown();
         rebootRaspberryPi();
       }, 1000);
     } catch (error) {

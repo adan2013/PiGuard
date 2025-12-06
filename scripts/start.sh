@@ -5,6 +5,15 @@
 
 cd /home/pi/PiGuard || exit 1
 
+# Wait for serial port to be available (if using USB device)
+if [ -n "$SERIAL_PORT" ] && [[ "$SERIAL_PORT" == /dev/ttyUSB* ]]; then
+    timeout=10
+    while [ ! -e "$SERIAL_PORT" ] && [ $timeout -gt 0 ]; do
+        sleep 1
+        timeout=$((timeout - 1))
+    done
+fi
+
 # Try to find node in common locations
 NODE_PATH=""
 

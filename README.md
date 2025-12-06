@@ -549,16 +549,23 @@ Set up PiGuard to start automatically when the Raspberry Pi boots.
    [Unit]
    Description=PiGuard Surveillance System
    After=network.target
+   Wants=network-online.target
 
    [Service]
    Type=simple
    User=pi
+   Group=dialout
    WorkingDirectory=/home/pi/PiGuard
    ExecStart=/home/pi/PiGuard/scripts/start.sh
    Restart=on-failure
    RestartSec=10
    StandardOutput=journal
    StandardError=journal
+   Environment="NODE_ENV=production"
+   # Load environment variables from .env file
+   EnvironmentFile=/home/pi/PiGuard/.env
+   # Wait for serial port to be available
+   ExecStartPre=/bin/sleep 5
 
    [Install]
    WantedBy=multi-user.target
@@ -572,16 +579,23 @@ Set up PiGuard to start automatically when the Raspberry Pi boots.
    [Unit]
    Description=PiGuard Surveillance System
    After=network.target
+   Wants=network-online.target
 
    [Service]
    Type=simple
    User=pi
+   Group=dialout
    WorkingDirectory=/home/pi/PiGuard
    ExecStart=/usr/bin/node dist/index.js
    Restart=on-failure
    RestartSec=10
    StandardOutput=journal
    StandardError=journal
+   Environment="NODE_ENV=production"
+   # Load environment variables from .env file
+   EnvironmentFile=/home/pi/PiGuard/.env
+   # Wait for serial port to be available
+   ExecStartPre=/bin/sleep 5
 
    [Install]
    WantedBy=multi-user.target
