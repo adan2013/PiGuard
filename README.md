@@ -271,7 +271,7 @@ PiGuard includes a built-in web interface for monitoring and control.
 2. **Open your web browser:**
    - On the Raspberry Pi: `http://localhost:8080`
    - From another device on the same network: `http://<raspberry-pi-ip>:8080`
-   - If using hotspot: `http://192.168.1.1:8080`
+   - If using hotspot: `http://192.168.5.1:8080`
 
 ### Web Panel Features
 
@@ -364,7 +364,7 @@ hostname -I
 arp -a | grep raspberrypi
 
 # Or use nmap
-nmap -sn 192.168.1.0/24 | grep -B 2 Raspberry
+nmap -sn 192.168.5.0/24 | grep -B 2 Raspberry
 ```
 
 #### Connecting via SSH
@@ -383,7 +383,7 @@ ssh pi@<raspberry-pi-ip>
 **Example:**
 
 ```bash
-ssh pi@192.168.1.100
+ssh pi@192.168.5.1
 ```
 
 ---
@@ -450,7 +450,7 @@ A Wi-Fi hotspot allows you to connect to your Raspberry Pi even without a router
 
    ```
    interface wlan0
-   static ip_address=192.168.1.1/24
+   static ip_address=192.168.5.1/24
    nohook wpa_supplicant
    ```
 
@@ -465,7 +465,7 @@ A Wi-Fi hotspot allows you to connect to your Raspberry Pi even without a router
 
    ```
    interface=wlan0
-   dhcp-range=192.168.1.2,192.168.1.20,255.255.255.0,24h
+   dhcp-range=192.168.5.2,192.168.5.20,255.255.255.0,24h
    ```
 
 6. **Enable and start services:**
@@ -487,8 +487,8 @@ A Wi-Fi hotspot allows you to connect to your Raspberry Pi even without a router
 8. **Connect to hotspot:**
    - Look for Wi-Fi network named "PiGuard" (or your custom name)
    - Connect using the password you set
-   - Access web panel at: `http://192.168.1.1:8080`
-   - SSH to: `ssh pi@192.168.1.1`
+   - Access web panel at: `http://192.168.5.1:8080`
+   - SSH to: `ssh pi@192.168.5.1`
 
 #### Method 2: Using create_ap Script
 
@@ -503,10 +503,10 @@ A Wi-Fi hotspot allows you to connect to your Raspberry Pi even without a router
 2. **Create hotspot:**
 
    ```bash
-   sudo create_ap wlan0 eth0 PiGuard YourPassword123 --subnet 192.168.1.0
+   sudo create_ap wlan0 eth0 PiGuard YourPassword123 --subnet 192.168.5.0
    ```
 
-   This will create a hotspot with the Raspberry Pi at `192.168.1.1`.
+   This will create a hotspot with the Raspberry Pi at `192.168.5.1`.
 
 3. **Make it permanent:**
    ```bash
