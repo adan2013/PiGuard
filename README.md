@@ -564,9 +564,9 @@ Set up PiGuard to start automatically when the Raspberry Pi boots.
    WantedBy=multi-user.target
    ```
 
-   **Option B: Using node directly (if you know the path):**
+   **Option B: Using node directly (if startup script doesn't work):**
 
-   Replace `/usr/bin/node` with the actual path from `which node`:
+   If the startup script fails to find node, use the direct path. Replace `/usr/bin/node` with the actual path from `which node`:
 
    ```ini
    [Unit]
@@ -586,6 +586,8 @@ Set up PiGuard to start automatically when the Raspberry Pi boots.
    [Install]
    WantedBy=multi-user.target
    ```
+
+   **Note:** If you're using nvm, you may need to use Option A (startup script) or create a wrapper script that sources nvm before running node.
 
    **Note:**
 
