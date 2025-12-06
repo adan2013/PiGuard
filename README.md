@@ -1,181 +1,639 @@
 # PiGuard 🛡️
 
-TypeScript-based surveillance system for Raspberry Pi with GSM module support.
+TypeScript-based surveillance system for Raspberry Pi with GSM module support and web interface.
 
-## Features
+---
 
-- Monitor up to 3 GPIO input pins
-- SMS alerts via GSM module
-- AT command queue with retry logic
-- Configurable via environment variables
-- Comprehensive logging
-- Cooldown protection against alert spam
+## 📋 Table of Contents
 
-## Hardware Requirements
+- [Status LED Meanings](#status-led-meanings)
+- [Sound Alerts](#sound-alerts)
+- [Front Panel Switches](#front-panel-switches)
+- [Quick Start Guide](#quick-start-guide)
+- [Configuration](#configuration)
+- [Running the System](#running-the-system)
+- [Web Control Panel](#web-control-panel)
+- [Raspberry Pi Setup](#raspberry-pi-setup)
 
-- Raspberry Pi with GPIO pins
-- GSM module (SIM800L, SIM900, SIM7600)
+---
+
+## 💡 Status LED Meanings
+
+The status LED provides visual feedback about the system state:
+
+| LED State      | Meaning         | Description                                                                  |
+| -------------- | --------------- | ---------------------------------------------------------------------------- |
+| **Off**        | System inactive | LED is turned off (typically during shutdown or initialization)              |
+| **Slow Flash** | System idle     | Brief flash every 5 seconds - system is running normally, no active triggers |
+| **Fast Blink** | ALERT ACTIVE    | Rapid blinking every 200ms - one or more triggers have been activated        |
+| **Solid On**   | Alerts disabled | LED stays on continuously - SMS alerts are disabled, by the key              |
+
+**Note:** The LED can be disabled via configuration (`DISABLE_LED=1` in `.env` file).
+
+---
+
+## 🔊 Sound Alerts
+
+The system uses different sound patterns to communicate various events:
+
+| Sound           | When It Plays   | Description                                                |
+| --------------- | --------------- | ---------------------------------------------------------- |
+| **Single Beep** | Switch actions  | Confirms various actions                                   |
+| **Long Beep**   | System startup  | 1-second beep when system starts                           |
+| **Melody Up**   | TRIGGER ALERT   | Ascending 5-note melody when a sensor trigger is activated |
+| **Melody Down** | System shutdown | Descending 5-note melody before system shutdown            |
+
+**Note:** Sounds can be disabled via configuration (`DISABLE_SOUND=1` in `.env` file).
+
+---
+
+## 🔑 Front Panel Key Switch
+
+The system uses a car ignition key switch for manual control. The switch has two positions:
+
+### SW1 - Ignition Position (Key Turned to "ON")
+
+When the key is turned to the ignition position:
+
+- **Disables SMS alerts**
+  - LED turns **Solid On** to indicate alerts are disabled
+  - Plays a single beep
+  - Useful when you're testing or want to temporarily disable alerts
+
+When the key is turned back (released from ignition position):
+
+- **Re-enables SMS alerts**
+  - LED returns to normal state (Slow Flash or Fast Blink)
+  - Plays a single beep
+  - System resumes normal monitoring
+
+### SW2 - Starter Position (Key Turned to "START")
+
+When the key is turned to the starter position:
+
+- **Brief Turn** (< 2 seconds): Sends diagnostic SMS
+
+  - Plays a single beep
+  - Sends a status report SMS to all configured phone numbers
+  - Includes system uptime, GSM status, and active triggers
+  - Key can be released back to ignition or off position
+
+- **Held in Starter Position** (≥ 2 seconds): Shuts down the Raspberry Pi
+  - Plays descending melody (Melody Down)
+  - Safely shuts down the system
+  - Raspberry Pi will power off
+
+---
+
+## 🚀 Quick Start Guide
+
+### Prerequisites
+
+- Raspberry Pi (any model with GPIO)
+- GSM module (recommended Huawei E3372 USB modem stick)
 - Active SIM card with SMS capability
-- GPIO sensors (door sensors, motion detectors)
+- PIR sensors (HC-SR501 or similar)
+- Node.js and npm installed
 
-## Installation
+### Installation
+
+1. **Clone or download the project:**
+
+   ```bash
+   cd ~/PiGuard
+   ```
+
+2. **Install dependencies:**
+
+   ```bash
+   npm install
+   ```
+
+3. **Find your serial port:**
+
+   ```bash
+   npm run list-ports
+   ```
+
+   Note the port name (e.g., `/dev/ttyUSB0` or `/dev/ttyAMA0`)
+
+4. **Create configuration file:**
+
+   ```bash
+   cp env.example .env
+   nano .env
+   ```
+
+5. **Configure your settings** (see [Configuration](#configuration) section below)
+
+6. **Build the project:**
+
+   ```bash
+   npm run build
+   ```
+
+7. **Run the system:**
+   ```bash
+   npm start
+   ```
+
+---
+
+## ⚙️ Configuration
+
+All configuration is done through the `.env` file. Copy `env.example` to `.env` and edit it:
 
 ```bash
-npm install
-npm run list-ports  # Find your serial port
 cp env.example .env
 nano .env
 ```
 
-## Configuration
+### Essential Settings
 
-Edit `.env` file:
+#### Serial Port Configuration
 
 ```env
-# Serial Port
-SERIAL_PORT=/dev/ttyUSB0
-SERIAL_BAUDRATE=9600
-
-# GPIO Pins (BCM numbering)
-GPIO_TRIGGER_1=17
-GPIO_TRIGGER_2=27
-GPIO_TRIGGER_3=22
-
-# Trigger Names
-TRIGGER_1_NAME=Front Door
-TRIGGER_2_NAME=Back Door
-TRIGGER_3_NAME=Window
-
-# Phone Numbers (comma-separated with country code)
-PHONE_NUMBERS=+1234567890,+0987654321
-
-# GSM Settings
-AT_COMMAND_TIMEOUT=5000
-AT_COMMAND_RETRY=3
+SERIAL_PORT=/dev/ttyUSB0          # Your GSM module serial port
+SERIAL_BAUDRATE=9600               # Usually 9600 for SIM800L
 ```
 
-## Hardware Setup
+#### GPIO Pin Configuration
 
-### GSM Module Connection
+```env
+# Sensor triggers (BCM numbering)
+GPIO_TRIGGER_1=23                  # First sensor pin
+GPIO_TRIGGER_2=24                  # Second sensor pin
+GPIO_TRIGGER_3=25                  # Third sensor pin
 
-| GSM Module | Raspberry Pi |
-| ---------- | ------------ |
-| VCC        | 5V           |
-| GND        | GND          |
-| TX         | RX (GPIO 15) |
-| RX         | TX (GPIO 14) |
+# Front panel components
+GPIO_LED=8                         # Status LED pin
+GPIO_SPK=7                         # Speaker pin
+GPIO_SW1=19                        # Ignition switch - Ignition position (ON)
+GPIO_SW2=26                        # Ignition switch - Starter position (START)
+```
 
-⚠️ Some GSM modules require 3.3V logic level shifters for RX/TX pins.
+#### Trigger Names
 
-## Usage
+```env
+TRIGGER_1_NAME=Front Door          # Name for trigger 1
+TRIGGER_2_NAME=Back Door           # Name for trigger 2
+TRIGGER_3_NAME=Window              # Name for trigger 3
+```
+
+#### Phone Numbers
+
+```env
+PHONE_NUMBERS=+1234567890,+0987654321  # Comma-separated, include country code
+```
+
+### Advanced Settings
+
+#### GSM Module Settings
+
+```env
+AT_COMMAND_TIMEOUT=5000            # Command timeout in milliseconds
+AT_COMMAND_RETRY=3                 # Number of retry attempts
+```
+
+#### Feature Toggles
+
+```env
+DISABLE_WELCOME_SMS=0              # 0 = enabled, 1 = disabled
+DISABLE_ALERT_SMS=0                # 0 = enabled, 1 = disabled
+DISABLE_LED=0                      # 0 = enabled, 1 = disabled
+DISABLE_SOUND=0                    # 0 = enabled, 1 = disabled
+```
+
+#### SMS Cooldown
+
+```env
+SMS_COOLDOWN_PERIOD=300000         # Milliseconds (300000 = 5 minutes)
+```
+
+#### GPIO Legacy Offset
+
+```env
+GPIO_LEGACY_OFFSET=512             # Usually 512 for newer Raspberry Pi OS
+```
+
+#### Web Server
+
+```env
+WEB_PORT=8080                      # Port for web control panel
+```
+
+### Configuration Tips
+
+- **Phone numbers must include country code** (e.g., `+1234567890` for US)
+- **GPIO pins use BCM numbering**, not physical pin numbers
+- **Test your serial port** with `npm run list-ports` before configuring
+- **Adjust cooldown period** to prevent SMS spam from multiple triggers
+
+---
+
+## 🏃 Running the System
+
+### Development Mode
+
+Run directly from TypeScript source (useful for testing):
 
 ```bash
-npm run build       # Compile TypeScript
-npm start           # Build and run
-npm run dev         # Development mode
-npm run watch       # Watch mode
-npm run list-ports  # List available serial ports
+npm run dev
 ```
 
-## Run as Service
+### Production Mode
 
-Create `/etc/systemd/system/piguard.service`:
-
-```ini
-[Unit]
-Description=PiGuard Surveillance System
-After=network.target
-
-[Service]
-Type=simple
-User=pi
-WorkingDirectory=/home/pi/PiGuard
-ExecStart=/usr/bin/npm start
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start:
+Build and run the compiled version:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable piguard.service
+npm run build
+npm start
+```
+
+### Running as a Service
+
+See the [Autostart Configuration](#autostart-configuration) section below for setting up PiGuard to run automatically on boot.
+
+---
+
+## 🌐 Web Control Panel
+
+PiGuard includes a built-in web interface for monitoring and control.
+
+### Accessing the Web Panel
+
+1. **Start the system:**
+
+   ```bash
+   npm start
+   ```
+
+2. **Open your web browser:**
+   - On the Raspberry Pi: `http://localhost:8080`
+   - From another device on the same network: `http://<raspberry-pi-ip>:8080`
+   - If using hotspot: `http://192.168.1.1:8080`
+
+### Web Panel Features
+
+The web control panel provides:
+
+- **System Status**: View uptime, running status, and cooldown state
+- **Input States**: Real-time view of all sensor triggers (DETECTED/CLEAR)
+- **GSM Configuration**: View serial port settings, phone numbers, and GSM module status
+- **Logs Viewer**: Browse recent system logs and error logs
+- **Environment Editor**: Edit `.env` configuration file directly from the browser
+- **Actions**:
+  - Send diagnostic SMS
+  - Reboot system
+  - Shutdown system
+
+### Using the Web Panel
+
+1. **Monitor System Status:**
+
+   - Check the dashboard for current system state
+   - View which sensors are active (DETECTED) or clear
+
+2. **Send Diagnostic SMS:**
+
+   - Click "Send Diagnostic SMS" button
+   - System will send a status report to all configured phone numbers
+   - Useful for checking if the system is working remotely
+
+3. **Edit Configuration:**
+
+   - Navigate to the Environment section
+   - Edit the `.env` file content
+   - Save changes
+   - Optionally reboot to apply changes immediately
+
+4. **View Logs:**
+
+   - Check recent system activity
+   - Review error logs for troubleshooting
+   - Logs are updated in real-time
+
+5. **System Control:**
+   - Reboot the Raspberry Pi remotely
+   - Shutdown the system safely
+
+---
+
+## 🍓 Raspberry Pi Setup
+
+### Connecting via SSH
+
+SSH allows you to remotely access and control your Raspberry Pi.
+
+#### Enable SSH on Raspberry Pi
+
+1. **Using Raspberry Pi Imager** (recommended for new installations):
+
+   - When flashing the OS, click the gear icon for advanced options
+   - Enable SSH and set a password
+   - Configure Wi-Fi if needed
+
+2. **Using raspi-config** (on existing installation):
+
+   ```bash
+   sudo raspi-config
+   ```
+
+   - Navigate to: `Interface Options` → `SSH`
+   - Select `Yes` to enable SSH
+   - Reboot if prompted
+
+3. **Manual method** (create empty file):
+   ```bash
+   sudo touch /boot/ssh
+   sudo reboot
+   ```
+
+#### Finding Your Raspberry Pi's IP Address
+
+**On the Raspberry Pi:**
+
+```bash
+hostname -I
+```
+
+**From another device on the same network:**
+
+```bash
+# Linux/Mac
+arp -a | grep raspberrypi
+
+# Or use nmap
+nmap -sn 192.168.1.0/24 | grep -B 2 Raspberry
+```
+
+#### Connecting via SSH
+
+**From Linux/Mac:**
+
+```bash
+ssh pi@<raspberry-pi-ip>
+```
+
+**From Windows:**
+
+- Use PuTTY, Windows Terminal, or PowerShell
+- Command: `ssh pi@<raspberry-pi-ip>`
+
+**Example:**
+
+```bash
+ssh pi@192.168.1.100
+```
+
+---
+
+### Setting Up Wi-Fi Hotspot
+
+A Wi-Fi hotspot allows you to connect to your Raspberry Pi even without a router.
+
+#### Method 1: Using Raspberry Pi OS Built-in Hotspot (Recommended)
+
+1. **Install required packages:**
+
+   ```bash
+   sudo apt update
+   sudo apt install -y hostapd dnsmasq
+   ```
+
+2. **Configure hostapd:**
+
+   ```bash
+   sudo nano /etc/hostapd/hostapd.conf
+   ```
+
+   Add the following:
+
+   ```
+   interface=wlan0
+   driver=nl80211
+   ssid=PiGuard
+   hw_mode=g
+   channel=7
+   wmm_enabled=0
+   macaddr_acl=0
+   auth_algs=1
+   ignore_broadcast_ssid=0
+   wpa=2
+   wpa_passphrase=YourPassword123
+   wpa_key_mgmt=WPA-PSK
+   wpa_pairwise=TKIP
+   rsn_pairwise=CCMP
+   ```
+
+   Replace `PiGuard` with your desired network name and `YourPassword123` with your password.
+
+3. **Configure hostapd service:**
+
+   ```bash
+   sudo nano /etc/default/hostapd
+   ```
+
+   Add:
+
+   ```
+   DAEMON_CONF="/etc/hostapd/hostapd.conf"
+   ```
+
+4. **Configure static IP for wlan0:**
+
+   ```bash
+   sudo nano /etc/dhcpcd.conf
+   ```
+
+   Add at the end:
+
+   ```
+   interface wlan0
+   static ip_address=192.168.1.1/24
+   nohook wpa_supplicant
+   ```
+
+5. **Configure dnsmasq:**
+
+   ```bash
+   sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
+   sudo nano /etc/dnsmasq.conf
+   ```
+
+   Add:
+
+   ```
+   interface=wlan0
+   dhcp-range=192.168.1.2,192.168.1.20,255.255.255.0,24h
+   ```
+
+6. **Enable and start services:**
+
+   ```bash
+   sudo systemctl unmask hostapd
+   sudo systemctl enable hostapd
+   sudo systemctl enable dnsmasq
+   sudo systemctl start hostapd
+   sudo systemctl start dnsmasq
+   ```
+
+7. **Reboot:**
+
+   ```bash
+   sudo reboot
+   ```
+
+8. **Connect to hotspot:**
+   - Look for Wi-Fi network named "PiGuard" (or your custom name)
+   - Connect using the password you set
+   - Access web panel at: `http://192.168.1.1:8080`
+   - SSH to: `ssh pi@192.168.1.1`
+
+#### Method 2: Using create_ap Script
+
+1. **Install create_ap:**
+
+   ```bash
+   git clone https://github.com/oblique/create_ap
+   cd create_ap
+   sudo make install
+   ```
+
+2. **Create hotspot:**
+
+   ```bash
+   sudo create_ap wlan0 eth0 PiGuard YourPassword123 --subnet 192.168.1.0
+   ```
+
+   This will create a hotspot with the Raspberry Pi at `192.168.1.1`.
+
+3. **Make it permanent:**
+   ```bash
+   sudo systemctl enable create_ap
+   ```
+
+---
+
+### Autostart Configuration
+
+Set up PiGuard to start automatically when the Raspberry Pi boots.
+
+#### Method 1: systemd Service (Recommended)
+
+1. **Create service file:**
+
+   ```bash
+   sudo nano /etc/systemd/system/piguard.service
+   ```
+
+2. **Find the location of node:**
+
+   First, find where node is installed:
+
+   ```bash
+   which node
+   ```
+
+   Common locations:
+
+   - `/usr/bin/node` (system-wide installation)
+   - `/usr/local/bin/node` (user installation)
+   - `~/.nvm/versions/node/.../bin/node` (nvm installation)
+
+3. **Add the following content to the service file:**
+
+   **Option A: Using the startup script (Recommended):**
+
+   ```ini
+   [Unit]
+   Description=PiGuard Surveillance System
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=pi
+   WorkingDirectory=/home/pi/PiGuard
+   ExecStart=/home/pi/PiGuard/scripts/start.sh
+   Restart=on-failure
+   RestartSec=10
+   StandardOutput=journal
+   StandardError=journal
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+   **Option B: Using node directly (if you know the path):**
+
+   Replace `/usr/bin/node` with the actual path from `which node`:
+
+   ```ini
+   [Unit]
+   Description=PiGuard Surveillance System
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=pi
+   WorkingDirectory=/home/pi/PiGuard
+   ExecStart=/usr/bin/node dist/index.js
+   Restart=on-failure
+   RestartSec=10
+   StandardOutput=journal
+   StandardError=journal
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+   **Note:**
+
+   - Adjust the `User` and `WorkingDirectory` paths if your setup is different
+   - If using nvm, you may need to use Option A (startup script) or set up the environment properly
+
+4. **Reload systemd and enable the service:**
+
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable piguard.service
+   sudo systemctl start piguard.service
+   ```
+
+5. **Check service status:**
+
+   ```bash
+   sudo systemctl status piguard.service
+   ```
+
+6. **View logs:**
+   ```bash
+   sudo journalctl -u piguard.service -f
+   ```
+
+#### Service Management Commands
+
+```bash
+# Start the service
 sudo systemctl start piguard.service
+
+# Stop the service
+sudo systemctl stop piguard.service
+
+# Restart the service
+sudo systemctl restart piguard.service
+
+# Check status
 sudo systemctl status piguard.service
-```
 
-View logs:
-
-```bash
+# View logs
 sudo journalctl -u piguard.service -f
+
+# Disable autostart
+sudo systemctl disable piguard.service
+
+# Enable autostart
+sudo systemctl enable piguard.service
 ```
 
-## Project Structure
-
-```
-PiGuard/
-├── src/
-│   ├── types/             # TypeScript type definitions
-│   │   ├── index.ts       # Type exports
-│   │   ├── config.types.ts
-│   │   ├── queue.types.ts
-│   │   ├── gsm.types.ts
-│   │   └── system.types.ts
-│   ├── Config.ts          # Configuration management
-│   ├── ATCommandQueue.ts  # AT command queue
-│   ├── GSMModule.ts       # GSM communication
-│   └── index.ts           # Main application
-├── scripts/
-│   └── list-ports.js      # Serial port scanner
-├── dist/                  # Compiled output
-├── package.json
-├── tsconfig.json
-└── .env                   # Configuration
-```
-
-## AT Commands
-
-- `AT` - Test connection
-- `ATE0` - Disable echo
-- `AT+CMGF=1` - SMS text mode
-- `AT+CNMI=1,2,0,0,0` - SMS notifications
-- `AT+CMGS="<number>"` - Send SMS
-
-## Troubleshooting
-
-### Serial Port Permission
-
-```bash
-sudo usermod -a -G dialout $USER
-sudo reboot
-```
-
-### GSM Module Not Responding
-
-- Check physical connections
-- Run `npm run list-ports` to find available serial ports
-- Verify serial port in `.env` file
-- Test with: `minicom -D /dev/ttyUSB0 -b 9600`
-- Ensure SIM card is inserted
-- Check power supply
-
-### GPIO Access
-
-```bash
-sudo usermod -a -G gpio $USER
-sudo reboot
-```
-
-### No SMS Received
-
-- Verify SIM has credit/active plan
-- Check phone numbers include country code
-- Verify network signal and registration
-- Check logs for errors
-
-## License
-
-MIT
+---
