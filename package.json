@@ -4,8 +4,8 @@
   "description": "Raspberry Pi surveillance system with GSM module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "npm run build && node dist/index.js",
+    "build": "./scripts/build.sh",
+    "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "watch": "tsc --watch",
     "list-ports": "node scripts/list-ports.js",
