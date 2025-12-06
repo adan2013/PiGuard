@@ -392,126 +392,187 @@ ssh pi@192.168.5.1
 
 A Wi-Fi hotspot allows you to connect to your Raspberry Pi even without a router.
 
-#### Method 1: Using Raspberry Pi OS Built-in Hotspot (Recommended)
+#### Using NetworkManager (nmcli) - Recommended
 
-1. **Install required packages:**
+This is the simplest method and works with modern Raspberry Pi OS versions that include NetworkManager.
 
-   ```bash
-   sudo apt update
-   sudo apt install -y hostapd dnsmasq
-   ```
-
-2. **Configure hostapd:**
+1. **Create the hotspot:**
 
    ```bash
-   sudo nano /etc/hostapd/hostapd.conf
-   ```
-
-   Add the following:
-
-   ```
-   interface=wlan0
-   driver=nl80211
-   ssid=PiGuard
-   hw_mode=g
-   channel=7
-   wmm_enabled=0
-   macaddr_acl=0
-   auth_algs=1
-   ignore_broadcast_ssid=0
-   wpa=2
-   wpa_passphrase=YourPassword123
-   wpa_key_mgmt=WPA-PSK
-   wpa_pairwise=TKIP
-   rsn_pairwise=CCMP
+   sudo nmcli device wifi hotspot ssid PiGuard password YourPassword123
    ```
 
    Replace `PiGuard` with your desired network name and `YourPassword123` with your password.
 
-3. **Configure hostapd service:**
+2. **Verify the hotspot is running:**
 
    ```bash
-   sudo nano /etc/default/hostapd
+   nmcli connection show
    ```
 
-   Add:
+   You should see a connection named "Hotspot" or "PiGuard".
 
-   ```
-   DAEMON_CONF="/etc/hostapd/hostapd.conf"
-   ```
-
-4. **Configure static IP for wlan0:**
+3. **Configure the hotspot to use IP 192.168.5.1:**
 
    ```bash
-   sudo nano /etc/dhcpcd.conf
+   # Find the hotspot connection name
+   nmcli connection show
+
+   # Configure IP address (replace "Hotspot" with actual connection name if different)
+   sudo nmcli connection modify Hotspot ipv4.addresses 192.168.5.1/24
+   sudo nmcli connection modify Hotspot ipv4.method shared
+
+   # Restart the hotspot to apply changes
+   sudo nmcli connection down Hotspot
+   sudo nmcli connection up Hotspot
    ```
 
-   Add at the end:
-
-   ```
-   interface wlan0
-   static ip_address=192.168.5.1/24
-   nohook wpa_supplicant
-   ```
-
-5. **Configure dnsmasq:**
+4. **Verify the IP address:**
 
    ```bash
-   sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
-   sudo nano /etc/dnsmasq.conf
+   ip addr show wlan0
    ```
 
-   Add:
+   You should see `192.168.5.1` assigned to wlan0.
 
-   ```
-   interface=wlan0
-   dhcp-range=192.168.5.2,192.168.5.20,255.255.255.0,24h
-   ```
-
-6. **Enable and start services:**
+5. **Make it permanent (start on boot):**
 
    ```bash
-   sudo systemctl unmask hostapd
-   sudo systemctl enable hostapd
-   sudo systemctl enable dnsmasq
-   sudo systemctl start hostapd
-   sudo systemctl start dnsmasq
+   # Enable the hotspot connection to start automatically
+   sudo nmcli connection modify Hotspot connection.autoconnect yes
    ```
 
-7. **Reboot:**
+   Or if the connection has a different name:
 
    ```bash
-   sudo reboot
+   # List connections to find the hotspot name
+   nmcli connection show
+   # Then enable autoconnect (replace "Hotspot" with actual name)
+   sudo nmcli connection modify "Hotspot" connection.autoconnect yes
    ```
 
-8. **Connect to hotspot:**
+6. **Connect to hotspot:**
+   - Disconnect your device from your regular Wi-Fi
    - Look for Wi-Fi network named "PiGuard" (or your custom name)
    - Connect using the password you set
    - Access web panel at: `http://192.168.5.1:8080`
    - SSH to: `ssh pi@192.168.5.1`
 
-#### Method 2: Using create_ap Script
+**Note:** Once the hotspot is active, the Pi will no longer be connected to your regular Wi-Fi network. You'll need to connect to the "PiGuard" hotspot to access the Pi.
 
-1. **Install create_ap:**
+**Troubleshooting connection issues:**
 
-   ```bash
-   git clone https://github.com/oblique/create_ap
-   cd create_ap
-   sudo make install
-   ```
+If you can see the hotspot but can't connect with your password:
 
-2. **Create hotspot:**
+1. **Check the current hotspot password:**
 
    ```bash
-   sudo create_ap wlan0 eth0 PiGuard YourPassword123 --subnet 192.168.5.0
+   nmcli connection show Hotspot | grep wifi-sec.psk
    ```
 
-   This will create a hotspot with the Raspberry Pi at `192.168.5.1`.
+   This will show the current password configured for the hotspot.
 
-3. **Make it permanent:**
+2. **Recreate the hotspot with a new password:**
+
    ```bash
-   sudo systemctl enable create_ap
+   # Delete the existing hotspot
+   sudo nmcli connection delete Hotspot
+
+   # Create a new hotspot with your desired password
+   sudo nmcli device wifi hotspot ssid PiGuard password YourNewPassword123
+
+   # Configure IP address again
+   sudo nmcli connection modify Hotspot ipv4.addresses 192.168.5.1/24
+   sudo nmcli connection modify Hotspot ipv4.method shared
+
+   # Restart to apply
+   sudo nmcli connection down Hotspot
+   sudo nmcli connection up Hotspot
    ```
+
+3. **Check hotspot status and logs:**
+
+   ```bash
+   # Check if hotspot is running
+   nmcli connection show --active
+
+   # Check NetworkManager logs for errors
+   sudo journalctl -u NetworkManager -n 50
+   ```
+
+4. **Verify Wi-Fi security settings:**
+
+   ```bash
+   # Check security mode (should be WPA2)
+   nmcli connection show Hotspot | grep wifi-sec
+   ```
+
+5. **If password is set but connection still fails:**
+
+   The password might have special characters or encoding issues. Try these steps:
+
+   ```bash
+   # Stop the hotspot
+   sudo nmcli connection down Hotspot
+
+   # Delete and recreate with a simple password (letters and numbers only, 8+ characters)
+   sudo nmcli connection delete Hotspot
+   sudo nmcli device wifi hotspot ssid PiGuard password SimplePass123
+
+   # Set IP address
+   sudo nmcli connection modify Hotspot ipv4.addresses 192.168.5.1/24
+   sudo nmcli connection modify Hotspot ipv4.method shared
+
+   # Restart NetworkManager to ensure clean state
+   sudo systemctl restart NetworkManager
+
+   # Wait a few seconds, then start hotspot
+   sleep 3
+   sudo nmcli connection up Hotspot
+
+   # Verify it's running
+   iwconfig wlan0
+   nmcli connection show --active
+   ```
+
+   **Common issues:**
+
+   - **Special characters**: Some devices have trouble with special characters in passwords. Use only letters and numbers.
+   - **Password length**: Ensure it's at least 8 characters.
+   - **Case sensitivity**: Passwords are case-sensitive.
+   - **Device compatibility**: Some older devices may have issues with WPA2. You can try WPA instead:
+     ```bash
+     sudo nmcli connection modify Hotspot wifi-sec.key-mgmt wpa-psk
+     sudo nmcli connection modify Hotspot wifi-sec.proto wpa
+     sudo nmcli connection down Hotspot
+     sudo nmcli connection up Hotspot
+     ```
+
+6. **Check if the hotspot is actually broadcasting:**
+
+   ```bash
+   # On another device, scan for networks
+   # You should see "PiGuard" in the list
+
+   # On the Pi, check if AP mode is active
+   iwconfig wlan0
+   # Should show: Mode:Master (not Mode:Managed)
+
+   # Check NetworkManager logs for errors
+   sudo journalctl -u NetworkManager -n 100 | grep -i error
+   ```
+
+**To stop the hotspot:**
+
+```bash
+sudo nmcli connection down Hotspot
+```
+
+**To start it again:**
+
+```bash
+sudo nmcli connection up Hotspot
+```
 
 ---
 
