@@ -21,6 +21,9 @@ export class GSMModule {
   private isReady: boolean = false;
   private pendingCommand: PendingCommand | null = null;
   private diagnostics: GSMDiagnostics = {};
+  private isReconnecting: boolean = false;
+  private reconnectAttempts: number = 0;
+  private readonly MAX_RECONNECT_ATTEMPTS = 3;
 
   constructor(config: Config) {
     this.config = config;
@@ -29,7 +32,13 @@ export class GSMModule {
       config.atCommandRetry
     );
 
-    this.commandQueue.setExecutor(this.executeATCommand.bind(this));
+    this.commandQueue.setExecutor(async (commandObj) => {
+      return await this.executeATCommand({
+        command: commandObj.command,
+        expectedResponse: commandObj.expectedResponse,
+        skipCRLF: false,
+      });
+    });
   }
 
   public async performConnectionTest() {
@@ -101,6 +110,8 @@ export class GSMModule {
 
       this.parser.on("data", (data: string) => this.handleResponse(data));
 
+      this.setupPortEventHandlers();
+
       await new Promise<void>((resolve, reject) => {
         this.port!.open((err) => {
           if (err) {
@@ -133,6 +144,208 @@ export class GSMModule {
       errorLogger.error("[GSM] Initialization failed:", errorMessage);
       throw error;
     }
+  }
+
+  private setupPortEventHandlers(): void {
+    if (!this.port) return;
+
+    this.port.on("close", () => {
+      logger.warn("[GSM] Serial port closed unexpectedly");
+      this.isReady = false;
+      this.isReconnecting = false;
+      this.reconnectAttempts = 0;
+
+      if (this.pendingCommand) {
+        clearTimeout(this.pendingCommand.timeoutHandle);
+        this.pendingCommand.reject(
+          new Error("Serial port closed during command execution")
+        );
+        this.pendingCommand = null;
+      }
+      this.commandQueue.clear();
+    });
+
+    this.port.on("error", (err: Error) => {
+      errorLogger.error("[GSM] Serial port error:", err.message);
+      this.isReady = false;
+
+      if (this.pendingCommand) {
+        clearTimeout(this.pendingCommand.timeoutHandle);
+        this.pendingCommand.reject(
+          new Error(`Serial port error: ${err.message}`)
+        );
+        this.pendingCommand = null;
+      }
+    });
+  }
+
+  private async ensurePortOpen(): Promise<void> {
+    if (this.port && this.port.isOpen) {
+      return;
+    }
+
+    if (this.isReconnecting) {
+      let waitCount = 0;
+      while (this.isReconnecting && waitCount < 50) {
+        await this.delay(100);
+        waitCount++;
+        if (this.port && this.port.isOpen) {
+          return;
+        }
+      }
+      if (!this.port || !this.port.isOpen) {
+        throw new Error("Serial port reconnection timeout");
+      }
+      return;
+    }
+
+    await this.reconnect();
+  }
+
+  private async reconnect(): Promise<void> {
+    if (this.isReconnecting) {
+      return;
+    }
+
+    this.isReconnecting = true;
+    const initialAttempts = this.reconnectAttempts;
+
+    while (
+      this.reconnectAttempts - initialAttempts <
+      this.MAX_RECONNECT_ATTEMPTS
+    ) {
+      this.reconnectAttempts++;
+      const attemptNumber = this.reconnectAttempts - initialAttempts;
+
+      logger.info(
+        `[GSM] Attempting to reconnect serial port (attempt ${attemptNumber}/${this.MAX_RECONNECT_ATTEMPTS})...`
+      );
+
+      try {
+        if (this.port) {
+          try {
+            if (this.port.isOpen) {
+              await new Promise<void>((resolve) => {
+                this.port!.close(() => resolve());
+              });
+            }
+          } catch (error) {}
+          this.port = null;
+          this.parser = null;
+        }
+
+        this.port = new SerialPort({
+          path: this.config.serialPort,
+          baudRate: this.config.serialBaudrate,
+          autoOpen: false,
+        });
+
+        this.parser = this.port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
+        this.parser.on("data", (data: string) => this.handleResponse(data));
+        this.setupPortEventHandlers();
+
+        await new Promise<void>((resolve, reject) => {
+          this.port!.open((err) => {
+            if (err) {
+              reject(new Error(`Failed to reopen serial port: ${err.message}`));
+            } else {
+              resolve();
+            }
+          });
+        });
+
+        logger.info("[GSM] Serial port reconnected successfully");
+
+        await this.delay(2000);
+        await this.executeATCommandDirectly("AT", "OK");
+        await this.executeATCommandDirectly("ATE0", "OK");
+        await this.executeATCommandDirectly("AT+CMGF=1", "OK");
+        await this.executeATCommandDirectly("AT+CNMI=1,2,0,0,0", "OK");
+        await this.executeATCommandDirectly(`AT+CSCS="GSM"`, "OK");
+
+        this.isReady = true;
+        this.reconnectAttempts = 0;
+        logger.info("[GSM] GSM module reinitialized after reconnection");
+        this.isReconnecting = false;
+        return;
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        errorLogger.error(
+          `[GSM] Reconnection attempt ${attemptNumber} failed:`,
+          errorMessage
+        );
+
+        if (attemptNumber >= this.MAX_RECONNECT_ATTEMPTS) {
+          this.isReconnecting = false;
+          this.reconnectAttempts = 0;
+          throw new Error(
+            `Failed to reconnect serial port after ${this.MAX_RECONNECT_ATTEMPTS} attempts`
+          );
+        }
+
+        await this.delay(2000);
+      }
+    }
+
+    this.isReconnecting = false;
+    throw new Error(
+      `Failed to reconnect serial port after ${this.MAX_RECONNECT_ATTEMPTS} attempts`
+    );
+  }
+
+  private async executeATCommandDirectly(
+    command: string,
+    expectedResponse: string | null = "OK"
+  ): Promise<string> {
+    if (!this.port || !this.port.isOpen) {
+      throw new Error("Serial port not open");
+    }
+
+    return new Promise((resolve, reject) => {
+      if (command.includes(String.fromCharCode(26))) {
+        logger.info(`[GSM] >> ${command.replace(/\x1A/g, "<CTRL+Z>")}`);
+      } else {
+        logger.info(`[GSM] >> ${command}`);
+      }
+
+      this.responseBuffer = "";
+
+      const dataToWrite = command + "\r\n";
+
+      // If expectedResponse is null, don't wait for response, resolve immediately
+      if (expectedResponse === null) {
+        this.port!.write(dataToWrite, (err) => {
+          if (err) {
+            reject(new Error(`Failed to write command: ${err.message}`));
+          } else {
+            resolve("");
+          }
+        });
+        return;
+      }
+
+      const timeoutHandle = setTimeout(() => {
+        this.pendingCommand = null;
+        reject(new Error(`Command timeout: ${command}`));
+      }, this.config.atCommandTimeout);
+
+      this.pendingCommand = {
+        command,
+        expectedResponse,
+        timeoutHandle,
+        resolve,
+        reject,
+      };
+
+      this.port!.write(dataToWrite, (err) => {
+        if (err) {
+          clearTimeout(timeoutHandle);
+          this.pendingCommand = null;
+          reject(new Error(`Failed to write command: ${err.message}`));
+        }
+      });
+    });
   }
 
   private handleResponse(data: string): void {
@@ -181,10 +394,11 @@ export class GSMModule {
     }
   }
 
-  public sendCommand(
+  public async sendCommand(
     command: string,
     expectedResponse: string | null = "OK"
   ): Promise<string> {
+    await this.ensurePortOpen();
     if (!this.port || !this.port.isOpen) {
       return Promise.reject(new Error("Serial port not open"));
     }
@@ -192,11 +406,16 @@ export class GSMModule {
     return this.commandQueue.add(command, expectedResponse);
   }
 
-  private executeATCommand(commandObj: {
+  private async executeATCommand(commandObj: {
     command: string;
     expectedResponse: string | null;
     skipCRLF?: boolean;
   }): Promise<string> {
+    await this.ensurePortOpen();
+    if (!this.port || !this.port.isOpen) {
+      throw new Error("Serial port not open");
+    }
+
     return new Promise((resolve, reject) => {
       const { command, expectedResponse, skipCRLF } = commandObj;
 

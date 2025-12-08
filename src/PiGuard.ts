@@ -218,7 +218,16 @@ export class PiGuard {
     });
     this.frontPanel.onSwitch2ShortPress(async () => {
       this.frontPanel.playSingleBeep();
-      await this.sendDiagnosticSMS();
+      try {
+        await this.sendDiagnosticSMS();
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        errorLogger.error(
+          "[PiGuard] Error in switch2ShortPress handler:",
+          errorMessage
+        );
+      }
     });
     this.frontPanel.onSwitch2LongPress(async () => {
       await this.frontPanel.playMelodyDown();
@@ -317,9 +326,19 @@ export class PiGuard {
   }
 
   public async sendDiagnosticSMS(): Promise<SMSResult[]> {
-    await this.gsm.performConnectionTest();
-    const statusReport = this.gsm.getCompactStatusReport(this.activeTriggers);
-    return await this.gsm.sendToAll(statusReport);
+    try {
+      await this.gsm.performConnectionTest();
+      const statusReport = this.gsm.getCompactStatusReport(this.activeTriggers);
+      return await this.gsm.sendToAll(statusReport);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      errorLogger.error(
+        "[PiGuard] Failed to send diagnostic SMS:",
+        errorMessage
+      );
+      return [];
+    }
   }
 
   public getInputStates(): Array<{
