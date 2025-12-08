@@ -31,12 +31,15 @@ def double_beep(pwm: GPIO.PWM) -> None:
 
 
 def long_beep(pwm: GPIO.PWM) -> None:
-  """Long beep (1 second)"""
   play_tone(pwm, 1.0, DEFAULT_FREQUENCY_HZ)
 
 
 def melody_up(pwm: GPIO.PWM) -> None:
-  """Ascending melody"""
+  for multiplier in MELODY_UP_NOTES:
+    freq = int(DEFAULT_FREQUENCY_HZ * multiplier)
+    play_tone(pwm, 0.12, freq)
+    time.sleep(0.03)
+  time.sleep(1.0)  # 1 second gap
   for multiplier in MELODY_UP_NOTES:
     freq = int(DEFAULT_FREQUENCY_HZ * multiplier)
     play_tone(pwm, 0.12, freq)
@@ -44,7 +47,6 @@ def melody_up(pwm: GPIO.PWM) -> None:
 
 
 def melody_down(pwm: GPIO.PWM) -> None:
-  """Descending melody"""
   for multiplier in MELODY_DOWN_NOTES:
     freq = int(DEFAULT_FREQUENCY_HZ * multiplier)
     play_tone(pwm, 0.12, freq)

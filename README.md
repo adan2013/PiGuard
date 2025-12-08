@@ -4,19 +4,6 @@ TypeScript-based surveillance system for Raspberry Pi with GSM module support an
 
 ---
 
-## 📋 Table of Contents
-
-- [Status LED Meanings](#status-led-meanings)
-- [Sound Alerts](#sound-alerts)
-- [Front Panel Switches](#front-panel-switches)
-- [Quick Start Guide](#quick-start-guide)
-- [Configuration](#configuration)
-- [Running the System](#running-the-system)
-- [Web Control Panel](#web-control-panel)
-- [Raspberry Pi Setup](#raspberry-pi-setup)
-
----
-
 ## 💡 Status LED Meanings
 
 The status LED provides visual feedback about the system state:
@@ -153,7 +140,7 @@ nano .env
 #### Serial Port Configuration
 
 ```env
-SERIAL_PORT=/dev/ttyUSB0          # Your GSM module serial port
+SERIAL_PORT=/dev/ttyUSB0           # Your GSM module serial port
 SERIAL_BAUDRATE=9600               # Usually 9600 for SIM800L
 ```
 
@@ -390,10 +377,6 @@ ssh pi@192.168.5.1
 
 ### Setting Up Wi-Fi Hotspot
 
-A Wi-Fi hotspot allows you to connect to your Raspberry Pi even without a router.
-
-#### Using NetworkManager (nmcli) - Recommended
-
 This is the simplest method and works with modern Raspberry Pi OS versions that include NetworkManager.
 
 1. **Create the hotspot:**
@@ -409,8 +392,6 @@ This is the simplest method and works with modern Raspberry Pi OS versions that 
    ```bash
    nmcli connection show
    ```
-
-   You should see a connection named "Hotspot" or "PiGuard".
 
 3. **Configure the hotspot to use IP 192.168.5.1:**
 
@@ -458,7 +439,7 @@ This is the simplest method and works with modern Raspberry Pi OS versions that 
    - Access web panel at: `http://192.168.5.1:8080`
    - SSH to: `ssh pi@192.168.5.1`
 
-**Note:** Once the hotspot is active, the Pi will no longer be connected to your regular Wi-Fi network. You'll need to connect to the "PiGuard" hotspot to access the Pi.
+**Note:** Once the hotspot is active, the Pi will no longer be connected to your regular Wi-Fi network. You'll need to connect to the "PiGuard" hotspot to access the Pi or use wired connection.
 
 **Troubleshooting connection issues:**
 
@@ -714,3 +695,49 @@ sudo systemctl enable piguard.service
 ```
 
 ---
+
+## AT Commands Reference
+
+PiGuard uses AT (Attention) commands to communicate with the GSM module. Commands are grouped by function with query and set commands together.
+
+### Basic Commands
+
+| Command | Purpose                        | Response |
+| ------- | ------------------------------ | -------- |
+| `AT`    | Test communication with module | `OK`     |
+| `ATE0`  | Disable command echo           | `OK`     |
+
+### SMS Format
+
+| Command             | Purpose                                    | Response        |
+| ------------------- | ------------------------------------------ | --------------- |
+| `AT+CMGF?`          | Query SMS format (0=PDU, 1=Text)           | `+CMGF: <mode>` |
+| `AT+CMGF=1`         | Set SMS format to text mode                | `OK`            |
+| `AT+CMGS="<phone>"` | Send SMS (requires `CTRL+Z` after message) | `>` prompt      |
+
+### Character Set
+
+| Command         | Purpose                             | Response |
+| --------------- | ----------------------------------- | -------- |
+| `AT+CSCS="GSM"` | Set character encoding to GSM 7-bit | `OK`     |
+
+### Message Notifications
+
+| Command             | Purpose                                                 | Response |
+| ------------------- | ------------------------------------------------------- | -------- |
+| `AT+CNMI=1,2,0,0,0` | Configure SMS notifications (enable, route to terminal) | `OK`     |
+
+### Network Status (Query Only)
+
+| Command    | Purpose                             | Response                        |
+| ---------- | ----------------------------------- | ------------------------------- |
+| `AT+CREG?` | Network registration status         | `+CREG: <n>,<stat>`             |
+| `AT+COPS?` | Current network operator            | `+COPS: <mode>,<format>,<oper>` |
+| `AT+CSQ`   | Signal quality (RSSI 0-31, BER 0-7) | `+CSQ: <rssi>,<ber>`            |
+
+### SIM Card Status (Query Only)
+
+| Command    | Purpose                    | Response                       |
+| ---------- | -------------------------- | ------------------------------ |
+| `AT+CPIN?` | SIM PIN status             | `+CPIN: READY/SIM PIN/SIM PUK` |
+| `AT+CSCA?` | SMS service center address | `+CSCA: "<sca>",<tosca>`       |
