@@ -13,7 +13,7 @@ webServer = new WebServer(piGuard, webPort);
 webServer.start();
 
 process.on("SIGINT", async () => {
-  logger.warn("\n[PiGuard] Received SIGINT signal");
+  logger.warn("[PiGuard] Received SIGINT signal");
   if (webServer) {
     webServer.stop();
   }
@@ -21,7 +21,7 @@ process.on("SIGINT", async () => {
 });
 
 process.on("SIGTERM", async () => {
-  logger.warn("\n[PiGuard] Received SIGTERM signal");
+  logger.warn("[PiGuard] Received SIGTERM signal");
   if (webServer) {
     webServer.stop();
   }

@@ -150,7 +150,7 @@ export class GSMModule {
     if (!this.port) return;
 
     this.port.on("close", () => {
-      logger.warn("[GSM] Serial port closed unexpectedly");
+      logger.warn("[GSM] Serial port closed");
       this.isReady = false;
       this.isReconnecting = false;
       this.reconnectAttempts = 0;
@@ -217,7 +217,7 @@ export class GSMModule {
       this.reconnectAttempts++;
       const attemptNumber = this.reconnectAttempts - initialAttempts;
 
-      logger.info(
+      logger.warn(
         `[GSM] Attempting to reconnect serial port (attempt ${attemptNumber}/${this.MAX_RECONNECT_ATTEMPTS})...`
       );
 
@@ -532,8 +532,6 @@ export class GSMModule {
 
   public async close(): Promise<void> {
     logger.info("[GSM] Closing GSM module...");
-
-    this.commandQueue.clear();
 
     if (this.port && this.port.isOpen) {
       await new Promise<void>((resolve) => {

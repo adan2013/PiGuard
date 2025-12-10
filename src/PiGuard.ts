@@ -224,7 +224,7 @@ export class PiGuard {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         errorLogger.error(
-          "[PiGuard] Error in switch2ShortPress handler:",
+          "[PiGuard] Error sending diagnostic SMS:",
           errorMessage
         );
       }
@@ -326,19 +326,9 @@ export class PiGuard {
   }
 
   public async sendDiagnosticSMS(): Promise<SMSResult[]> {
-    try {
-      await this.gsm.performConnectionTest();
-      const statusReport = this.gsm.getCompactStatusReport(this.activeTriggers);
-      return await this.gsm.sendToAll(statusReport);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      errorLogger.error(
-        "[PiGuard] Failed to send diagnostic SMS:",
-        errorMessage
-      );
-      return [];
-    }
+    await this.gsm.performConnectionTest();
+    const statusReport = this.gsm.getCompactStatusReport(this.activeTriggers);
+    return await this.gsm.sendToAll(statusReport);
   }
 
   public getInputStates(): Array<{
