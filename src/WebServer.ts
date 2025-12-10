@@ -183,8 +183,19 @@ export class WebServer {
         return;
       }
 
+      const timeBeforeSync = Date.now();
       await setSystemTime(timestamp);
+      const timeAfterSync = Date.now();
+      const timeDifference = timeAfterSync - timeBeforeSync;
+
+      const config = this.piGuard.getConfig();
+      config.adjustStartupTimestamp(timeDifference);
+
       logger.info("[WebServer] System time synchronized via web interface");
+      logger.info(
+        `[WebServer] Adjusted startup timestamp by ${timeDifference}ms to maintain uptime accuracy`
+      );
+
       res.json({
         success: true,
         message: "System time synchronized successfully",

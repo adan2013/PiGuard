@@ -2,7 +2,7 @@ import { GpioPins, TriggerNames, FrontPanelGpioPins } from "./types";
 import { logger } from "./utils/logger";
 
 export class Config {
-  public readonly startupTimestamp: number;
+  public startupTimestamp: number;
   public readonly serialPort: string;
   public readonly serialBaudrate: number;
   public readonly gpioPins: GpioPins;
@@ -107,6 +107,13 @@ export class Config {
       (uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
     );
     return { days, hours };
+  }
+
+  public adjustStartupTimestamp(timeDifference: number): void {
+    this.startupTimestamp += timeDifference;
+    logger.info(
+      `[Config] Adjusted startup timestamp by ${timeDifference}ms to maintain accurate uptime`
+    );
   }
 
   public display(): void {
