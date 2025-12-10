@@ -4,6 +4,7 @@ import { readFile, writeFile, existsSync } from "fs";
 import { join } from "path";
 import { PiGuard } from "./PiGuard";
 import { shutdownRaspberryPi, rebootRaspberryPi } from "./utils/shutdownUtils";
+import { getSystemTime, setSystemTime } from "./utils/systemTimeUtils";
 import { logger, errorLogger } from "./utils/logger";
 
 export class WebServer {
@@ -30,6 +31,7 @@ export class WebServer {
     this.app.get("/api/gsm-config", this.getGSMConfig.bind(this));
     this.app.get("/api/inputs", this.getInputs.bind(this));
     this.app.get("/api/status", this.getSystemStatus.bind(this));
+    this.app.post("/api/sync-time", this.syncTime.bind(this));
     this.app.get("/api/env", this.getEnvFile.bind(this));
     this.app.post("/api/env", this.saveEnvFile.bind(this));
     this.app.post(
@@ -155,6 +157,7 @@ export class WebServer {
       const config = this.piGuard.getConfig();
       const status = this.piGuard.getStatus();
       const uptime = config.getUptimeValue();
+      const systemTime = await getSystemTime();
 
       res.json({
         uptime: {
@@ -163,10 +166,32 @@ export class WebServer {
         },
         running: status.running,
         inCooldown: status.inCooldown,
+        systemTime: systemTime,
       });
     } catch (error) {
       errorLogger.error("[WebServer] Error getting system status:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  private async syncTime(req: Request, res: Response): Promise<void> {
+    try {
+      const { timestamp } = req.body;
+
+      if (!timestamp) {
+        res.status(400).json({ error: "Timestamp is required" });
+        return;
+      }
+
+      await setSystemTime(timestamp);
+      logger.info("[WebServer] System time synchronized via web interface");
+      res.json({
+        success: true,
+        message: "System time synchronized successfully",
+      });
+    } catch (error) {
+      errorLogger.error("[WebServer] Error syncing system time:", error);
+      res.status(500).json({ error: "Failed to sync system time" });
     }
   }
 

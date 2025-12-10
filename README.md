@@ -264,13 +264,14 @@ PiGuard includes a built-in web interface for monitoring and control.
 
 The web control panel provides:
 
-- **System Status**: View uptime, running status, and cooldown state
+- **System Status**: View uptime, system time, running status, and cooldown state
 - **Input States**: Real-time view of all sensor triggers (DETECTED/CLEAR)
 - **GSM Configuration**: View serial port settings, phone numbers, and GSM module status
 - **Logs Viewer**: Browse recent system logs and error logs
 - **Environment Editor**: Edit `.env` configuration file directly from the browser
 - **Actions**:
   - Send diagnostic SMS
+  - Sync device time (synchronize Raspberry Pi time with your phone/device time)
   - Reboot system
   - Shutdown system
 
@@ -301,8 +302,16 @@ The web control panel provides:
    - Logs are updated in real-time
 
 5. **System Control:**
+
+   - Sync device time: Synchronize the Raspberry Pi system time with your phone/device's current time
    - Reboot the Raspberry Pi remotely
    - Shutdown the system safely
+
+6. **Time Synchronization:**
+   - Click "Sync device time" button in the System Controls section
+   - The system will use your device's current time to set the Raspberry Pi system time
+   - The current system time is displayed in the System Status section (format: HH:MM DD-MM-YYYY)
+   - Note: This feature requires sudo permissions to set system time
 
 ---
 

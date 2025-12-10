@@ -279,6 +279,7 @@
         <div class="button-group">
           <button onclick="reloadAllData()">Reload All Data</button>
           <button onclick="sendDiagnosticSMS()">Send Diagnostic SMS</button>
+          <button onclick="syncDeviceTime()">Sync device time</button>
           <button class="warning" onclick="rebootSystem()">Reboot</button>
           <button class="danger" onclick="shutdownSystem()">Shutdown</button>
         </div>
@@ -671,9 +672,22 @@
             ? '<span style="color: #27ae60;">Running</span>'
             : '<span style="color: #e74c3c;">Stopped</span>';
 
+          let systemTimeText = "N/A";
+          if (data.systemTime) {
+            try {
+              const [datePart, timePart] = data.systemTime.split("T");
+              const [year, month, day] = datePart.split("-");
+              const [hours, minutes] = timePart.split(":");
+              systemTimeText = `${hours}:${minutes} ${day}-${month}-${year}`;
+            } catch (e) {
+              systemTimeText = "Invalid";
+            }
+          }
+
           container.innerHTML = `
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
               <div><strong>Uptime:</strong> ${uptimeText}</div>
+              <div><strong>System Time:</strong> ${systemTimeText}</div>
               <div><strong>Status:</strong> ${runningText}</div>
               <div><strong>Cooldown:</strong> ${cooldownText}</div>
             </div>
@@ -751,6 +765,49 @@
           });
           const data = await response.json();
           alert(data.message || "Rebooting...");
+        } catch (error) {
+          alert(`Error: ${error.message}`);
+        }
+      }
+
+      // Sync Device Time
+      async function syncDeviceTime() {
+        if (
+          !confirm(
+            "This will sync the Raspberry Pi system time with your device's current time. Continue?"
+          )
+        ) {
+          return;
+        }
+
+        try {
+          const deviceTime = new Date();
+          const year = deviceTime.getFullYear();
+          const month = String(deviceTime.getMonth() + 1).padStart(2, "0");
+          const day = String(deviceTime.getDate()).padStart(2, "0");
+          const hours = String(deviceTime.getHours()).padStart(2, "0");
+          const minutes = String(deviceTime.getMinutes()).padStart(2, "0");
+          const seconds = String(deviceTime.getSeconds()).padStart(2, "0");
+          const timestamp = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+
+          const response = await fetch(`${API_BASE}/sync-time`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              timestamp: timestamp,
+            }),
+          });
+
+          const data = await response.json();
+          if (data.error) {
+            alert(`Error: ${data.error}`);
+            return;
+          }
+
+          alert(data.message || "System time synchronized successfully");
+          refreshSystemStatus();
         } catch (error) {
           alert(`Error: ${error.message}`);
         }
