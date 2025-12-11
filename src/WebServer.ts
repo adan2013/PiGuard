@@ -191,11 +191,9 @@ export class WebServer {
       const config = this.piGuard.getConfig();
       config.adjustStartupTimestamp(timeDifference);
 
-      logger.info("[WebServer] System time synchronized via web interface");
       logger.info(
-        `[WebServer] Adjusted startup timestamp by ${timeDifference}ms to maintain uptime accuracy`
+        "[WebServer] System time synchronized via web interface. Startup timestamp adjusted to maintain current uptime value"
       );
-
       res.json({
         success: true,
         message: "System time synchronized successfully",

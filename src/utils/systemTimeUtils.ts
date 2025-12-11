@@ -13,7 +13,7 @@ export async function getSystemTime(): Promise<string | null> {
     const { stdout } = await execAsync("date +%Y-%m-%dT%H:%M:%S");
     return stdout.trim();
   } catch (error) {
-    errorLogger.error("[SystemTime] Error getting system time:", error);
+    errorLogger.error("[PiGuard] Error getting system time:", error);
     return null;
   }
 }
@@ -62,28 +62,28 @@ export async function setSystemTime(timestamp: string | number): Promise<void> {
       }
     }
 
-    logger.info(`[SystemTime] Setting system time to: ${dateString}`);
+    logger.info(`[PiGuard] Setting system time to: ${dateString}`);
 
     const command = `sudo date -s "${dateString}"`;
     const { stderr } = await execAsync(command);
 
     if (stderr) {
-      errorLogger.error(`[SystemTime] Date command stderr: ${stderr}`);
+      errorLogger.error(`[PiGuard] Date command stderr: ${stderr}`);
     }
 
     // Also sync hardware clock if available
     try {
       await execAsync("sudo hwclock -w");
-      logger.info("[SystemTime] Hardware clock synchronized");
+      logger.info("[PiGuard] Hardware clock synchronized");
     } catch (hwError) {
       logger.warn(
-        "[SystemTime] Could not sync hardware clock (may not be available)"
+        "[PiGuard] Could not sync hardware clock (may not be available)"
       );
     }
 
-    logger.info("[SystemTime] System time set successfully");
+    logger.info("[PiGuard] System time set successfully");
   } catch (error) {
-    errorLogger.error("[SystemTime] Error setting system time:", error);
+    errorLogger.error("[PiGuard] Error setting system time:", error);
     throw new Error("Failed to set system time");
   }
 }

@@ -111,9 +111,6 @@ export class Config {
 
   public adjustStartupTimestamp(timeDifference: number): void {
     this.startupTimestamp += timeDifference;
-    logger.info(
-      `[Config] Adjusted startup timestamp by ${timeDifference}ms to maintain accurate uptime`
-    );
   }
 
   public display(): void {
