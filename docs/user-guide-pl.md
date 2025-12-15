@@ -38,15 +38,15 @@ Kluczyk ma dwie pozycje robocze:
 
 ## SMS diagnostyczny
 
-Wiadomość diagnostyczna zawiera skrócony raport o stanie modemu GSM i systemu. Typowe pola (format „compact”) i ich znaczenie:
+Wiadomość diagnostyczna zawiera skrócony raport o stanie modemu GSM i systemu:
 
-- `SIM:` – status karty SIM, np. „READY” lub opis stanu (np. prośba o pin/puk)
+- `SIM:` – status karty SIM, np. „READY” lub opis stanu np. prośba o pin/puk.
 - `NET:` – status rejestracji w sieci (zarejestrowano/brak/sieć lokalna/roaming).
 - `OP:` – skrócona nazwa bieżącego operatora; w nawiasie może pojawić się używana technologia (np. 4G).
 - `SIG:` – opis siły sygnału radiowego (np. EXC - Excellent).
 - `PH:` – liczba skonfigurowanych numerów telefonów.
 - `UPT:` – czas pracy urządzenia w dniach i godzinach.
-- `IN:` – stany wejść czujników w kolejności trigger1–3; `1` oznacza wykrycie, `0` brak.
+- `IN:` – stany wejść czujników w kolejności od 1 do 3; `1` oznacza wykrycie, `0` brak.
 
 ## Podstawowe kroki użytkownika
 
