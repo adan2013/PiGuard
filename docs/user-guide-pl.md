@@ -55,3 +55,12 @@ Wiadomość diagnostyczna zawiera skrócony raport o stanie modemu GSM i systemu
 3. Tymczasowo wyłącz powiadomienia – przekręć kluczyk do pozycji 1 (LED świeci ciągle).
 4. Wyślij testowy SMS – krótko przekręć do pozycji 2 (< 2 s); pojedynczy beep, wysyłasz raport diagnostyczny.
 5. Wyłącz system – przytrzymaj pozycję 2 ponad 2 sekundy, usłyszysz melodię malejącą, PiGuard wyłączy się bezpiecznie (odczekaj do 10 sekund).
+
+## Regulacja czujników podczerwieni
+
+Czujniki podczewieni są regulowane za pomocą dwóch mini potencjometrów. Dostępne są poprzez otwór w obudowie czujnika.
+
+- **Regulacja czułości (litera S)** – obróć potencjometr w prawo, aby zwiększyć czułość, w lewo, aby zmniejszyć czułość.
+- **Regulacja długości sygnału (litera T)** – obróć potencjometr w prawo, aby zwiększyć czas reakcji, w lewo, aby zmniejszyć czas reakcji. Dla PiGuard wystarczy kilka sekund długości impulsu - potencjometr ustawiony mniej więcej na godzinę 9-10.
+
+![pir sensor](./pir-sensor-adjustments.png)
