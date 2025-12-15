@@ -20,7 +20,7 @@ Ten przewodnik w języku polskim opisuje podstawową obsługę systemu PiGuard n
 
 > Dźwięki można wyłączyć ustawiając `DISABLE_SOUND=1` w `.env`.
 
-## Stacyjka kluczykowa (SW1 / SW2)
+## Stacyjka kluczykowa
 
 Kluczyk ma dwie pozycje robocze:
 
